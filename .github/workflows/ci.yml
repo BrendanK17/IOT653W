@@ -1,0 +1,39 @@
+name: CI Pipeline
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.13"
+
+    - name: Install Poetry and dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install poetry
+        poetry install --no-root
+
+    - name: Run backend tests (temporary placeholder)
+      working-directory: ./backend
+      run: |
+        echo "Running temporary test stage..."
+        # e.g., poetry run pytest
+
+    - name: Lint
+      working-directory: ./backend
+      run: poetry run black --check .
+
+    - name: Type check
+      working-directory: ./backend
+      run: poetry run mypy app/
