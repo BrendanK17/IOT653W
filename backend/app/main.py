@@ -20,6 +20,7 @@ app.add_middleware(
 # Include routers
 app.include_router(api.router)
 
+
 @app.get("/")
 def read_root():
     return {"message": "Hello from FastAPI backend!"}
