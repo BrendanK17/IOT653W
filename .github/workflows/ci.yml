@@ -22,6 +22,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install poetry
         poetry install
+    
+    - name: Install dependencies
+      working-directory: ./backend
+      run: poetry install
 
     - name: Run backend tests (temporary placeholder)
       run: |
