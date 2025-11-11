@@ -14,11 +14,9 @@ dependencies = [
     "ollama>=0.6.0,<0.7.0"
 ]
 
-[project.optional-dependencies]
-dev = [
-    "black>=24.0,<25.0",
-    "mypy>=1.5,<2.0"
-]
+[tool.poetry.dev-dependencies]
+black = "^24.0"
+mypy = "^1.5"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
