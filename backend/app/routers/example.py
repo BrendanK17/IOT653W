@@ -12,3 +12,4 @@ def get_example():
 @router.get("/{item_id}")
 def get_item(item_id: int):
     return {"item_id": item_id, "description": f"Item number {item_id}"}
+
