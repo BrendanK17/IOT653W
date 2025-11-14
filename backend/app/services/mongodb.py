@@ -25,6 +25,7 @@ except Exception as e:
 DB_NAME = "iot653u_db"  # You can change this to your preferred DB name
 CLIMATIQ_COLLECTION = "climatiq_responses"
 
+
 def save_climatiq_response(query_params: dict, response: dict):
     """
     Save a Climatiq API response to MongoDB.
@@ -34,11 +35,9 @@ def save_climatiq_response(query_params: dict, response: dict):
     """
     db = client[DB_NAME]
     collection = db[CLIMATIQ_COLLECTION]
-    doc = {
-        "query_params": query_params,
-        "response": response
-    }
+    doc = {"query_params": query_params, "response": response}
     collection.insert_one(doc)
+
 
 def get_latest_climatiq_response(query_params: dict):
     """
