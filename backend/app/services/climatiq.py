@@ -14,6 +14,9 @@ HEADERS = {"Authorization": f"Bearer {CLIMATIQ_API_KEY}"}
 SEARCH_URL = "https://api.climatiq.io/data/v1/search"
 ESTIMATE_URL = "https://api.climatiq.io/data/v1/estimate"
 
+# MongoDB integration
+from .mongodb import save_climatiq_response, get_latest_climatiq_response
+
 
 def get_emission_factors(
     mode_of_transport: str, region: str, lca_activity: str = "well_to_tank"
@@ -38,7 +41,17 @@ def get_emission_factors(
             print("✅ Climatiq API returned a response!")
     except requests.HTTPError as e:
         print(f"[Climatiq] HTTPError: {e}")
-        raise ValueError(f"Climatiq API error: {e}")
+        print("[Climatiq] Falling back to MongoDB cache.")
+        # Add region and lca_activity to params for cache lookup
+        cache_params = params.copy()
+        cache_params["region"] = region
+        cache_params["lca_activity"] = lca_activity
+        cached = get_latest_climatiq_response(cache_params)
+        if cached:
+            print("[MongoDB] Returning cached response.")
+            return cached
+        else:
+            raise ValueError(f"Climatiq API error and no cached result found: {e}")
 
     # Filter results for region and lca_activity
     filtered = [
@@ -82,4 +95,9 @@ def get_emission_factors(
         "uncertainty": latest.get("uncertainty"),
         "access_type": latest.get("access_type"),
     }
+    # Save to MongoDB for future fallback
+    mongo_params = params.copy()
+    mongo_params["region"] = region
+    mongo_params["lca_activity"] = lca_activity
+    save_climatiq_response(mongo_params, output)
     return output

@@ -41,6 +41,3 @@ def query_climatiq(
     except Exception:
         logging.exception("Unexpected error in query_climatiq")
         raise HTTPException(status_code=500, detail="Internal server error")
-
-
-# Removed unused item_id endpoint
