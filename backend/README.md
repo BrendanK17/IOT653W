@@ -39,3 +39,10 @@ Alternative ReDoc documentation:
 ```bash
 http://127.0.0.1:8000/redoc
 ```
+
+To check and fix formatting and type errors:
+
+Run poetry run black . to auto-format your code.
+Run poetry run mypy app/ to check for type errors.
+If mypy reports missing stubs, install them using poetry run pip install types-<package>.
+Fix any remaining errors as reported by mypy.
