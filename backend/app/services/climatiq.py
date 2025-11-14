@@ -6,10 +6,7 @@ import json
 load_dotenv()
 
 CLIMATIQ_API_KEY = os.getenv("CLIMATIQ_API_KEY")
-if not CLIMATIQ_API_KEY:
-    raise ValueError("CLIMATIQ_API_KEY is not set")
-
-HEADERS = {"Authorization": f"Bearer {CLIMATIQ_API_KEY}"}
+HEADERS = {"Authorization": f"Bearer {CLIMATIQ_API_KEY}"} if CLIMATIQ_API_KEY else {}
 
 SEARCH_URL = "https://api.climatiq.io/data/v1/search"
 ESTIMATE_URL = "https://api.climatiq.io/data/v1/estimate"

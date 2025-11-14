@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from app.services import climatiq, mongodb
 
 def test_fallback_to_mongodb_when_climatiq_api_error(monkeypatch):
@@ -12,8 +12,21 @@ def test_fallback_to_mongodb_when_climatiq_api_error(monkeypatch):
     }
     expected_response = {"activity_id": "mock_id", "name": "Mock Name"}
 
-    # Insert mock response into MongoDB
-    mongodb.save_climatiq_response(query_params, expected_response)
+    # Mock MongoDB functions to simulate cache behavior
+    saved_data = {}
+    
+    def mock_save(params, response):
+        saved_data[str(params)] = response
+    
+    def mock_get(params):
+        return saved_data.get(str(params))
+    
+    # Patch the functions in the climatiq module where they are imported
+    monkeypatch.setattr("app.services.climatiq.save_climatiq_response", mock_save)
+    monkeypatch.setattr("app.services.climatiq.get_latest_climatiq_response", mock_get)
+
+    # Insert mock response into "MongoDB" (our mock)
+    mock_save(query_params, expected_response)
 
     # Mock requests.get to raise HTTPError
     class MockResponse:

@@ -7,18 +7,17 @@ load_dotenv()
 
 MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
 
-if not MONGODB_CONNECTION_STRING:
-    raise ValueError("MONGODB_CONNECTION_STRING is not set")
+# Create a new client and connect to the server only if connection string is available
+client: MongoClient | None = None
 
-# Create a new client and connect to the server
-client: MongoClient = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
-
-# Send a ping to confirm a successful connection
-try:
-    client.admin.command("ping")
-    print("Pinged your deployment. You successfully connected to MongoDB!")
-except Exception as e:
-    print(e)
+if MONGODB_CONNECTION_STRING:
+    client = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
+    # Send a ping to confirm a successful connection
+    try:
+        client.admin.command("ping")
+        print("Pinged your deployment. You successfully connected to MongoDB!")
+    except Exception as e:
+        print(e)
 
 
 # --- Climatiq Response Collection ---
@@ -33,6 +32,8 @@ def save_climatiq_response(query_params: dict, response: dict):
         query_params: The parameters used for the API request (e.g., mode_of_transport, region, lca_activity)
         response: The API response to store
     """
+    if client is None:
+        return  # Skip if MongoDB is not configured
     db = client[DB_NAME]
     collection = db[CLIMATIQ_COLLECTION]
     doc = {"query_params": query_params, "response": response}
@@ -47,6 +48,8 @@ def get_latest_climatiq_response(query_params: dict):
     Returns:
         The latest matching response or None
     """
+    if client is None:
+        return None  # Return None if MongoDB is not configured
     db = client[DB_NAME]
     collection = db[CLIMATIQ_COLLECTION]
     # Find the most recent matching document
