@@ -15,17 +15,14 @@ SEARCH_URL = "https://api.climatiq.io/data/v1/search"
 ESTIMATE_URL = "https://api.climatiq.io/data/v1/estimate"
 
 
-def get_emission_factors(mode_of_transport: str,
-                         region: str,
-                         lca_activity: str = "well_to_tank"):
+def get_emission_factors(
+    mode_of_transport: str, region: str, lca_activity: str = "well_to_tank"
+):
 
     # -----------------------------
     # 1) SEARCH
     # -----------------------------
-    params = {
-        "query": mode_of_transport.replace("_", " "),
-        "data_version": "27"
-    }
+    params = {"query": mode_of_transport.replace("_", " "), "data_version": "27"}
     try:
         resp = requests.get(SEARCH_URL, params=params, headers=HEADERS)
         print(f"[Climatiq] Request URL: {resp.url}")
@@ -44,7 +41,12 @@ def get_emission_factors(mode_of_transport: str,
         raise ValueError(f"Climatiq API error: {e}")
 
     # Filter results for region and lca_activity
-    filtered = [r for r in results if r.get("region") == region and r.get("source_lca_activity", lca_activity) == lca_activity]
+    filtered = [
+        r
+        for r in results
+        if r.get("region") == region
+        and r.get("source_lca_activity", lca_activity) == lca_activity
+    ]
     if not filtered:
         filtered = [r for r in results if r.get("region") == region]
     if not filtered:
@@ -54,7 +56,9 @@ def get_emission_factors(mode_of_transport: str,
     filtered.sort(key=lambda r: r.get("year", 0), reverse=True)
     latest = filtered[0] if filtered else None
     if not latest:
-        raise ValueError(f"No matching emission factors found for {mode_of_transport} in region {region}")
+        raise ValueError(
+            f"No matching emission factors found for {mode_of_transport} in region {region}"
+        )
 
     # Prepare output
     output = {
