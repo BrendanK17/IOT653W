@@ -6,11 +6,21 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { BrowserRouter } from 'react-router-dom';
 import App from '../../App';
+
+// Helper to render App with Router
+const renderApp = () => {
+  return render(
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  );
+};
 
 describe('End-to-End User Journey Tests', () => {
   it('should complete a full search and view results journey', async () => {
-    render(<App />);
+    renderApp();
     
     // Step 1: User sees landing page
     expect(screen.getByText(/Find the Best Way from Airport to City/i)).toBeInTheDocument();
@@ -41,7 +51,7 @@ describe('End-to-End User Journey Tests', () => {
   });
 
   it('should complete registration and account setup journey', async () => {
-    render(<App />);
+    renderApp();
     
     // Step 1: Click register
     const registerButton = screen.getByRole('button', { name: /register/i });
@@ -78,7 +88,7 @@ describe('End-to-End User Journey Tests', () => {
   });
 
   it('should complete insights exploration journey', async () => {
-    render(<App />);
+    renderApp();
     
     // Step 1: Search for airport
     const searchInput = screen.getByPlaceholderText(/Search for an airport/i);
@@ -108,7 +118,7 @@ describe('End-to-End User Journey Tests', () => {
   });
 
   it('should complete terminal transfers exploration journey', async () => {
-    render(<App />);
+    renderApp();
     
     // Step 1: Search for airport
     const searchInput = screen.getByPlaceholderText(/Search for an airport/i);
@@ -138,7 +148,7 @@ describe('End-to-End User Journey Tests', () => {
   });
 
   it('should handle dark mode toggle throughout journey', async () => {
-    render(<App />);
+    renderApp();
     
     // Step 1: Toggle dark mode on home page
     const darkModeButtons = screen.getAllByRole('button');
@@ -169,7 +179,7 @@ describe('End-to-End User Journey Tests', () => {
   });
 
   it('should complete booking flow', async () => {
-    render(<App />);
+    renderApp();
     
     // Step 1: Search and get results
     const searchInput = screen.getByPlaceholderText(/Search for an airport/i);

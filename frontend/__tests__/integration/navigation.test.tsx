@@ -6,11 +6,21 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { BrowserRouter } from 'react-router-dom';
 import App from '../../App';
+
+// Helper to render App with Router
+const renderApp = () => {
+  return render(
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  );
+};
 
 describe('Navigation Integration Tests', () => {
   it('should navigate from home to login page', async () => {
-    render(<App />);
+    renderApp();
     
     // Click login button
     const loginButton = screen.getByRole('button', { name: /log in/i });
@@ -22,7 +32,7 @@ describe('Navigation Integration Tests', () => {
   });
 
   it('should navigate from home to register page', async () => {
-    render(<App />);
+    renderApp();
     
     // Click register button
     const registerButton = screen.getByRole('button', { name: /register/i });
@@ -34,7 +44,7 @@ describe('Navigation Integration Tests', () => {
   });
 
   it('should return to home page from login', async () => {
-    render(<App />);
+    renderApp();
     
     // Navigate to login
     const loginButton = screen.getByRole('button', { name: /log in/i });
@@ -54,7 +64,7 @@ describe('Navigation Integration Tests', () => {
   });
 
   it('should complete login flow', async () => {
-    render(<App />);
+    renderApp();
     
     // Navigate to login
     const loginButton = screen.getByRole('button', { name: /log in/i });
@@ -82,7 +92,7 @@ describe('Navigation Integration Tests', () => {
   });
 
   it('should navigate to account page after login', async () => {
-    render(<App />);
+    renderApp();
     
     // Login first
     const loginButton = screen.getByRole('button', { name: /log in/i });
