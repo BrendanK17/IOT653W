@@ -6,21 +6,11 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { BrowserRouter } from 'react-router-dom';
 import App from '../../App';
-
-// Helper to render App with Router
-const renderApp = () => {
-  return render(
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  );
-};
 
 describe('Search Integration Tests', () => {
   it('should display search results after searching', async () => {
-    renderApp();
+    render(<App />);
     
     // Find and fill search input
     const searchInput = screen.getByPlaceholderText(/Search for an airport/i);
@@ -47,7 +37,7 @@ describe('Search Integration Tests', () => {
   });
 
   it('should filter airports as user types', async () => {
-    renderApp();
+    render(<App />);
     
     const searchInput = screen.getByPlaceholderText(/Search for an airport/i);
     
@@ -63,7 +53,7 @@ describe('Search Integration Tests', () => {
   });
 
   it('should not show dropdown for empty search', () => {
-    renderApp();
+    render(<App />);
     
     const searchInput = screen.getByPlaceholderText(/Search for an airport/i);
     fireEvent.focus(searchInput);
@@ -74,14 +64,14 @@ describe('Search Integration Tests', () => {
   });
 
   it('should disable search button when no airport selected', () => {
-    renderApp();
+    render(<App />);
     
     const searchButton = screen.getByRole('button', { name: /search routes/i });
     expect(searchButton).toBeDisabled();
   });
 
   it('should enable search button when airport is selected', async () => {
-    renderApp();
+    render(<App />);
     
     const searchInput = screen.getByPlaceholderText(/Search for an airport/i);
     fireEvent.change(searchInput, { target: { value: 'London Heathrow' } });
@@ -96,7 +86,7 @@ describe('Search Integration Tests', () => {
   });
 
   it('should prepopulate search with default airport for logged in users', async () => {
-    renderApp();
+    render(<App />);
     
     // Login
     const loginButton = screen.getByRole('button', { name: /log in/i });

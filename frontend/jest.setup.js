@@ -1,11 +1,6 @@
 // Jest setup file for configuring test environment
 require('@testing-library/jest-dom');
 
-// Add TextEncoder and TextDecoder polyfills for Node.js environment
-const { TextEncoder, TextDecoder } = require('util');
-global.TextEncoder = TextEncoder;
-global.TextDecoder = TextDecoder;
-
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
