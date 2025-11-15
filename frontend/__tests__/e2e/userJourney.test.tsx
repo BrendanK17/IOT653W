@@ -23,7 +23,7 @@ describe('End-to-End User Journey Tests', () => {
     renderApp();
     
     // Step 1: User sees landing page
-    expect(screen.getByText(/Find the Best Way from Airport to City/i)).toBeInTheDocument();
+    expect(screen.getByText(/Compare your best route from the airport to the city/i)).toBeInTheDocument();
     
     // Step 2: User searches for an airport
     const searchInput = screen.getByPlaceholderText(/Search for an airport/i);
