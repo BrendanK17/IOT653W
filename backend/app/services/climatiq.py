@@ -13,9 +13,7 @@ if not CLIMATIQ_API_KEY and not TESTING:
     raise ValueError("CLIMATIQ_API_KEY is not set")
 
 # If testing, leave headers empty so requests can be patched/mocked in tests.
-HEADERS = (
-    {"Authorization": f"Bearer {CLIMATIQ_API_KEY}"} if CLIMATIQ_API_KEY else {}
-)
+HEADERS = {"Authorization": f"Bearer {CLIMATIQ_API_KEY}"} if CLIMATIQ_API_KEY else {}
 
 SEARCH_URL = "https://api.climatiq.io/data/v1/search"
 ESTIMATE_URL = "https://api.climatiq.io/data/v1/estimate"
