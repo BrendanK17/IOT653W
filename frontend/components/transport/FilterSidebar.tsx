@@ -1,4 +1,3 @@
-import React from 'react';
 import { Car, Bus, Train, Clock, PoundSterling } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Checkbox } from '../ui/checkbox';
@@ -59,21 +58,14 @@ export function FilterSidebar({ filters, onFiltersChange }: FilterSidebarProps) 
   const updateMaxTime = (value: number[]) => {
     onFiltersChange({
       ...filters,
-      maxTime: value[0],
+      maxTime: value[0] ?? 180,
     });
   };
 
   const updateMaxPrice = (value: number[]) => {
     onFiltersChange({
       ...filters,
-      maxPrice: value[0],
-    });
-  };
-
-  const updateDepartureTime = (value: number[]) => {
-    onFiltersChange({
-      ...filters,
-      departureTime: [value[0], value[1]],
+      maxPrice: value[0] ?? 200,
     });
   };
 

@@ -32,7 +32,7 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <h3 className="font-bold text-base sm:text-lg capitalize text-gray-900">{transport.mode}</h3>
+              <h3 className="font-bold text-base sm:text-lg capitalize text-gray-900">{transport.name}</h3>
               {transport.isEco && (
                 <Badge variant="secondary" className="bg-green-100 text-green-800">
                   🌱 Eco-Friendly
@@ -68,7 +68,7 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
 
         <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 sm:gap-2 shrink-0">
           <p className="text-xl sm:text-2xl font-bold text-blue-600">
-            £{transport.price}
+            {transport.price === 0 ? 'FREE' : `£${transport.price}`}
           </p>
           <div className="flex gap-2">
             <Button

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Slider } from "../ui/slider";
 import { FilterState } from '../../types';
@@ -34,10 +33,10 @@ export const FilterContent: React.FC<FilterContentProps> = ({
             <div key={key} className="flex items-center space-x-2">
               <Checkbox
                 id={`${key}-filter`}
-                checked={filters.modes[key as keyof typeof filters.modes]}
+                checked={filters.transportModes[key as keyof typeof filters.transportModes]}
                 onCheckedChange={(checked) =>
                   updateFilters({
-                    modes: { ...filters.modes, [key]: checked === true }
+                    transportModes: { ...filters.transportModes, [key]: checked === true }
                   })
                 }
               />
@@ -69,10 +68,10 @@ export const FilterContent: React.FC<FilterContentProps> = ({
           <div className="flex items-center space-x-2">
             <Checkbox
               id="withStops-filter"
-              checked={filters.stops.withStops}
+              checked={filters.stops.oneOrMore}
               onCheckedChange={(checked) =>
                 updateFilters({
-                  stops: { ...filters.stops, withStops: checked === true }
+                  stops: { ...filters.stops, oneOrMore: checked === true }
                 })
               }
             />
@@ -86,16 +85,16 @@ export const FilterContent: React.FC<FilterContentProps> = ({
         <h4 className="font-semibold mb-3">Maximum Time</h4>
         <div className="space-y-2">
           <Slider
-            value={filters.maxTime}
+            value={[filters.maxTime]}
             onValueChange={(value) =>
-              updateFilters({ maxTime: value as [number] })
+              updateFilters({ maxTime: value[0] })
             }
             max={120}
             min={15}
             step={5}
             className="w-full"
           />
-          <div className="text-sm text-muted-foreground">{filters.maxTime[0]} minutes</div>
+          <div className="text-sm text-muted-foreground">{filters.maxTime} minutes</div>
         </div>
       </div>
 
@@ -104,16 +103,16 @@ export const FilterContent: React.FC<FilterContentProps> = ({
         <h4 className="font-semibold mb-3">Maximum Price</h4>
         <div className="space-y-2">
           <Slider
-            value={filters.maxPrice}
+            value={[filters.maxPrice]}
             onValueChange={(value) =>
-              updateFilters({ maxPrice: value as [number] })
+              updateFilters({ maxPrice: value[0] })
             }
             max={100}
             min={5}
             step={5}
             className="w-full"
           />
-          <div className="text-sm text-muted-foreground">£{filters.maxPrice[0]}</div>
+          <div className="text-sm text-muted-foreground">£{filters.maxPrice}</div>
         </div>
       </div>
 
@@ -121,10 +120,13 @@ export const FilterContent: React.FC<FilterContentProps> = ({
       <div>
         <h4 className="font-semibold mb-3">Departure Time</h4>
         <TimePicker
-          value={filters.departureTime}
-          onChange={(value) =>
-            updateFilters({ departureTime: value })
-          }
+          value={`${String(filters.departureTime[0]).padStart(2, '0')}:${String(filters.departureTime[1]).padStart(2, '0')}`}
+          onChange={(value) => {
+            const parts = value.split(':');
+            const hours = parseInt(parts[0] || '0');
+            const minutes = parseInt(parts[1] || '0');
+            updateFilters({ departureTime: [hours, minutes] });
+          }}
         />
       </div>
 
@@ -135,9 +137,9 @@ export const FilterContent: React.FC<FilterContentProps> = ({
           <div className="flex items-center space-x-2">
             <Checkbox
               id="flexible-filter"
-              checked={filters.flexibleTickets}
+              checked={filters.flexibleTicketsOnly}
               onCheckedChange={(checked) =>
-                updateFilters({ flexibleTickets: checked === true })
+                updateFilters({ flexibleTicketsOnly: checked === true })
               }
             />
             <label htmlFor="flexible-filter" className="cursor-pointer">Flexible tickets only</label>
@@ -145,9 +147,9 @@ export const FilterContent: React.FC<FilterContentProps> = ({
           <div className="flex items-center space-x-2">
             <Checkbox
               id="firstClass-filter"
-              checked={filters.firstClass}
+              checked={filters.firstClassOnly}
               onCheckedChange={(checked) =>
-                updateFilters({ firstClass: checked === true })
+                updateFilters({ firstClassOnly: checked === true })
               }
             />
             <label htmlFor="firstClass-filter" className="cursor-pointer">First class</label>

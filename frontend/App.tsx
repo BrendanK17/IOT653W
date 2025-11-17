@@ -1,92 +1,223 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { LoginForm, RegisterForm } from './components/auth/AuthForms';
 import { HomePage } from './components/layout/HomePage';
 import { NewInsightsPage } from './components/InsightsPage';
 import { TransfersPage } from './components/TransfersPage';
+import { TerminalTransfersPage } from './components/TerminalTransfersPage';
 import { AccountPage } from './components/AccountPage';
-import { ViewType } from './types';
+import { airports, transportOptions as rawTransportOptions } from './utils/mockData';
+import { ViewType, TransportOption } from './types';
 
-// Mock transport data
-const mockTransportOptions = [
-  {
-    id: '1',
-    mode: 'train',
-    name: 'Heathrow Express',
-    airport: 'LHR',
-    duration: '15 mins',
-    price: 25,
-    stops: 'Direct',
-    isEco: false,
-    isFastest: true,
-    isCheapest: false,
-    isBest: true,
-    route: 'Heathrow → Paddington Station',
-    co2: 2.1
-  },
-  {
-    id: '2',
-    mode: 'subway',
-    name: 'Piccadilly Line',
-    airport: 'LHR',
-    duration: '45 mins',
-    price: 6,
-    stops: '8 stops',
-    isEco: true,
-    isFastest: false,
-    isCheapest: true,
-    isBest: false,
-    route: 'Heathrow → Central London',
-    co2: 1.2
-  },
-  {
-    id: '3',
-    mode: 'bus',
-    name: 'National Express',
-    airport: 'LHR',
-    duration: '60 mins',
-    price: 8,
-    stops: '3 stops',
-    isEco: true,
-    isFastest: false,
-    isCheapest: false,
-    isBest: false,
-    route: 'Heathrow → Victoria Coach Station',
-    co2: 1.8
-  },
-  {
-    id: '4',
-    mode: 'taxi',
-    name: 'Taxi/Uber',
-    airport: 'LHR',
-    duration: '35 mins',
-    price: 45,
-    stops: 'Direct',
-    isEco: false,
-    isFastest: false,
-    isCheapest: false,
-    isBest: false,
-    route: 'Heathrow → Central London',
-    co2: 8.5
+// Convert airports data structure to simple array for backward compatibility
+const mockAirports = Object.entries(airports).flatMap(([city, airportList]) =>
+  airportList.map(airport => {
+    // Format as "City AirportName (CODE)" e.g., "London Heathrow (LHR)"
+    const cityName = city === 'London (All Airports)' ? 'London' : city;
+    return `${cityName} ${airport.name.replace(' Airport', '')} (${airport.code})`;
+  })
+);
+
+// Helper function to extract airport code from formatted string
+const extractAirportCode = (airportString: string): string => {
+  const match = airportString.match(/\(([A-Z]{3})\)/);
+  return match?.[1] || '';
+};
+
+// Convert transport options from mockData format to component format
+const convertTransportOptions = (options: any[], airportCode: string): TransportOption[] => {
+  return options.map((option, index) => ({
+    id: `${airportCode}-${index + 1}`,
+    mode: option.mode,
+    name: option.route,
+    airport: airportCode,
+    duration: `${option.duration} mins`,
+    price: option.price,
+    stops: option.stops === 0 ? 'Direct' : `${option.stops} stops`,
+    isEco: option.isEcoFriendly || false,
+    isFastest: option.isFastest || false,
+    isCheapest: option.isCheapest || false,
+    isBest: option.isBestOverall || false,
+    route: option.route,
+    co2: option.co2 || 0,
+  }));
+};
+
+// Helper function to get airport name from code
+const getAirportNameFromCode = (code: string): string => {
+  const upperCode = code.toUpperCase();
+  for (const [city, airportList] of Object.entries(airports)) {
+    const airport = airportList.find(a => a.code === upperCode);
+    if (airport) {
+      const cityName = city === 'London (All Airports)' ? 'London' : city;
+      return `${cityName} ${airport.name.replace(' Airport', '')} (${airport.code})`;
+    }
   }
-];
+  return '';
+};
 
-const mockAirports = [
-  'London Heathrow (LHR)',
-  'London Gatwick (LGW)',
-  'London Stansted (STN)',
-  'London Luton (LTN)',
-  'London City (LCY)',
-  'London Southend (SEN)',
-  'Manchester (MAN)',
-  'Birmingham (BHX)',
-  'Edinburgh (EDI)',
-  'Glasgow (GLA)'
-];
+// Wrapper component for TransfersPage that reads URL params
+const TransfersPageWrapper = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
+  const { airportCode } = useParams<{ airportCode: string }>();
+  const navigate = useNavigate();
+  
+  const airportName = getAirportNameFromCode(airportCode || '');
+  const transportOptions = airportCode ? convertTransportOptions(
+    rawTransportOptions[(airportCode.toUpperCase()) as keyof typeof rawTransportOptions] || [],
+    airportCode.toUpperCase()
+  ) : [];
+
+  // Redirect to home if invalid airport code
+  if (!airportName && airportCode) {
+    return <Navigate to="/" replace />;
+  }
+
+  const handleNavigate = (view: ViewType) => {
+    switch (view) {
+      case 'home':
+        navigate('/');
+        break;
+      case 'login':
+        navigate('/login');
+        break;
+      case 'register':
+        navigate('/register');
+        break;
+      case 'account':
+        navigate('/account');
+        break;
+      case 'insights':
+        navigate(`/${airportCode}/insights`);
+        break;
+      case 'terminal-transfers':
+        navigate(`/${airportCode}/transfers`);
+        break;
+      default:
+        navigate('/');
+    }
+  };
+
+  const onAirportSelect = (airport: string) => {
+    const code = extractAirportCode(airport);
+    navigate(`/${code}`);
+  };
+
+  return (
+    <TransfersPage
+      isLoggedIn={isLoggedIn}
+      onNavigate={handleNavigate}
+      selectedAirport={airportName}
+      searchQuery={airportName}
+      transportOptions={transportOptions}
+      onAirportSelect={onAirportSelect}
+      airports={mockAirports}
+    />
+  );
+};
+
+// Wrapper component for TerminalTransfersPage that reads URL params
+const TerminalTransfersPageWrapper = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
+  const { airportCode } = useParams<{ airportCode: string }>();
+  const navigate = useNavigate();
+
+  const airportName = getAirportNameFromCode(airportCode || '');
+
+  // Redirect to home if invalid airport code
+  if (!airportName && airportCode) {
+    return <Navigate to="/" replace />;
+  }
+
+  const handleNavigate = (view: ViewType) => {
+    switch (view) {
+      case 'home':
+        navigate('/');
+        break;
+      case 'login':
+        navigate('/login');
+        break;
+      case 'register':
+        navigate('/register');
+        break;
+      case 'account':
+        navigate('/account');
+        break;
+      case 'insights':
+        navigate(`/${airportCode}/insights`);
+        break;
+      case 'transfers':
+        navigate(`/${airportCode}`);
+        break;
+      default:
+        navigate('/');
+    }
+  };
+
+  return (
+    <TerminalTransfersPage
+      isLoggedIn={isLoggedIn}
+      onNavigate={handleNavigate}
+      selectedAirport={airportName}
+    />
+  );
+};
+
+// Wrapper component for InsightsPage that reads URL params
+const InsightsPageWrapper = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
+  const { airportCode } = useParams<{ airportCode: string }>();
+  const navigate = useNavigate();
+
+  const airportName = getAirportNameFromCode(airportCode || '');
+
+  // Redirect to home if invalid airport code
+  if (!airportName && airportCode) {
+    return <Navigate to="/" replace />;
+  }
+
+  const handleNavigate = (view: ViewType) => {
+    switch (view) {
+      case 'home':
+        navigate('/');
+        break;
+      case 'login':
+        navigate('/login');
+        break;
+      case 'register':
+        navigate('/register');
+        break;
+      case 'account':
+        navigate('/account');
+        break;
+      case 'results':
+        navigate(`/${airportCode}`);
+        break;
+      case 'transfers':
+        navigate(`/${airportCode}`);
+        break;
+      case 'terminal-transfers':
+        navigate(`/${airportCode}/transfers`);
+        break;
+      default:
+        navigate('/');
+    }
+  };
+
+  const handleDarkModeChange = (value: boolean) => {
+    // For now, just log - in a real app this would update global state
+    console.log('Dark mode changed:', value);
+  };
+
+  return (
+    <NewInsightsPage
+      darkMode={false} // Default to light mode for now
+      isLoggedIn={isLoggedIn}
+      onDarkModeChange={handleDarkModeChange}
+      onNavigate={handleNavigate}
+    />
+  );
+};
 
 function App() {
   const navigate = useNavigate();
-  const location = useLocation();
 
   // User state
   const [userState, setUserState] = useState({
@@ -183,8 +314,6 @@ function App() {
           <LoginForm
             onLogin={handleLogin}
             onNavigate={handleNavigate}
-            darkMode={appState.darkMode}
-            onDarkModeChange={handleDarkModeChange}
           />
         }
       />
@@ -195,8 +324,6 @@ function App() {
           <RegisterForm
             onRegister={handleLogin}
             onNavigate={handleNavigate}
-            darkMode={appState.darkMode}
-            onDarkModeChange={handleDarkModeChange}
           />
         }
       />
@@ -236,33 +363,23 @@ function App() {
                 />
               );
 
-            case 'transfers':
-              return (
-                <TransfersPage
-                  darkMode={appState.darkMode}
-                  isLoggedIn={userState.isLoggedIn}
-                  onDarkModeChange={handleDarkModeChange}
-                  onNavigate={handleNavigate}
-                  selectedAirport={appState.selectedAirport}
-                  searchQuery={appState.searchQuery}
-                  transportOptions={mockTransportOptions}
-                />
-              );
-
             case 'home':
             default:
               return (
                 <HomePage
-                  darkMode={appState.darkMode}
                   isLoggedIn={userState.isLoggedIn}
                   searchQuery={appState.searchQuery}
                   onSearchChange={(query) => setAppState(prev => ({ ...prev, searchQuery: query }))}
-                  onSearch={() => handleNavigate('transfers')}
+                  onSearch={() => {
+                    const code = extractAirportCode(appState.selectedAirport || appState.searchQuery);
+                    if (code) {
+                      navigate(`/${code.toLowerCase()}`);
+                    }
+                  }}
                   selectedAirport={appState.selectedAirport}
                   showDropdown={appState.showDropdown}
                   onShowDropdown={(show) => setAppState(prev => ({ ...prev, showDropdown: show }))}
                   onAirportSelect={(airport) => setAppState(prev => ({ ...prev, selectedAirport: airport }))}
-                  onDarkModeChange={handleDarkModeChange}
                   onNavigate={handleNavigate}
                   airports={mockAirports}
                   userEmail={userState.email}
@@ -271,6 +388,24 @@ function App() {
               );
           }
         })()}
+      />
+
+      {/* Airport-specific route */}
+      <Route 
+        path="/:airportCode" 
+        element={<TransfersPageWrapper isLoggedIn={userState.isLoggedIn} />}
+      />
+
+      {/* Terminal transfers route */}
+      <Route 
+        path="/:airportCode/transfers" 
+        element={<TerminalTransfersPageWrapper isLoggedIn={userState.isLoggedIn} />}
+      />
+
+      {/* Insights route */}
+      <Route 
+        path="/:airportCode/insights" 
+        element={<InsightsPageWrapper isLoggedIn={userState.isLoggedIn} />}
       />
     </Routes>
   );

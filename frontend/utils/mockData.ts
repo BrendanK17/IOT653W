@@ -43,6 +43,7 @@ export const transportOptions = {
       isFastest: true,
       departureTime: '06:15',
       arrivalTime: '06:30',
+      co2: 2.1,
     },
     {
       mode: 'subway' as const,
@@ -54,6 +55,7 @@ export const transportOptions = {
       isCheapest: true,
       departureTime: '06:00',
       arrivalTime: '06:45',
+      co2: 1.2,
     },
     {
       mode: 'bus' as const,
@@ -64,6 +66,7 @@ export const transportOptions = {
       isEcoFriendly: false,
       departureTime: '06:30',
       arrivalTime: '07:30',
+      co2: 1.8,
     },
     {
       mode: 'taxi' as const,
@@ -75,6 +78,7 @@ export const transportOptions = {
       isBestOverall: true,
       departureTime: '06:00',
       arrivalTime: '06:35',
+      co2: 8.5,
     },
   ],
   LGW: [
@@ -88,6 +92,7 @@ export const transportOptions = {
       isFastest: true,
       departureTime: '06:15',
       arrivalTime: '06:45',
+      co2: 3.2,
     },
     {
       mode: 'train' as const,
@@ -99,6 +104,7 @@ export const transportOptions = {
       isCheapest: true,
       departureTime: '06:20',
       arrivalTime: '07:05',
+      co2: 2.8,
     },
     {
       mode: 'bus' as const,
@@ -109,6 +115,7 @@ export const transportOptions = {
       isEcoFriendly: false,
       departureTime: '06:45',
       arrivalTime: '08:00',
+      co2: 2.5,
     },
     {
       mode: 'taxi' as const,
@@ -120,6 +127,7 @@ export const transportOptions = {
       isBestOverall: true,
       departureTime: '06:00',
       arrivalTime: '06:50',
+      co2: 12.0,
     },
   ],
   STN: [
@@ -133,6 +141,7 @@ export const transportOptions = {
       isFastest: true,
       departureTime: '06:25',
       arrivalTime: '07:01',
+      co2: 3.8,
     },
     {
       mode: 'bus' as const,
@@ -144,6 +153,7 @@ export const transportOptions = {
       isCheapest: true,
       departureTime: '06:30',
       arrivalTime: '07:25',
+      co2: 3.0,
     },
     {
       mode: 'taxi' as const,
@@ -155,6 +165,7 @@ export const transportOptions = {
       isBestOverall: true,
       departureTime: '06:00',
       arrivalTime: '07:00',
+      co2: 15.0,
     },
   ],
   LTN: [
@@ -168,6 +179,7 @@ export const transportOptions = {
       isCheapest: true,
       departureTime: '06:15',
       arrivalTime: '07:00',
+      co2: 3.5,
     },
     {
       mode: 'bus' as const,
@@ -178,6 +190,7 @@ export const transportOptions = {
       isEcoFriendly: false,
       departureTime: '06:45',
       arrivalTime: '07:50',
+      co2: 2.7,
     },
     {
       mode: 'taxi' as const,
@@ -190,6 +203,7 @@ export const transportOptions = {
       isBestOverall: true,
       departureTime: '06:00',
       arrivalTime: '06:40',
+      co2: 11.0,
     },
   ],
   LCY: [
@@ -205,6 +219,7 @@ export const transportOptions = {
       isBestOverall: true,
       departureTime: '06:30',
       arrivalTime: '06:55',
+      co2: 0.8,
     },
     {
       mode: 'taxi' as const,
@@ -215,6 +230,7 @@ export const transportOptions = {
       isEcoFriendly: false,
       departureTime: '06:00',
       arrivalTime: '06:30',
+      co2: 7.5,
     },
   ],
   MAN: [
@@ -230,6 +246,7 @@ export const transportOptions = {
       isBestOverall: true,
       departureTime: '06:15',
       arrivalTime: '06:35',
+      co2: 1.5,
     },
     {
       mode: 'bus' as const,
@@ -240,6 +257,7 @@ export const transportOptions = {
       isEcoFriendly: false,
       departureTime: '06:30',
       arrivalTime: '07:05',
+      co2: 2.2,
     },
     {
       mode: 'taxi' as const,
@@ -248,6 +266,7 @@ export const transportOptions = {
       route: 'Direct via A538',
       stops: 0,
       isEcoFriendly: false,
+      co2: 6.0,
       departureTime: '06:00',
       arrivalTime: '06:25',
     },
@@ -288,20 +307,18 @@ export function generateMockTransportData(city: string): TransportOption[] {
     airportOptions.forEach((option, index) => {
       options.push({
         id: `${airport.code}-${option.mode}-${index}`,
-        airportCode: airport.code,
-        airportName: airport.name,
+        airport: airport.code,
         mode: option.mode,
-        duration: option.duration,
+        name: option.route,
+        duration: `${option.duration} mins`,
         price: option.price,
-        destination: city.split(' ')[0] + ' City Centre',
-        stops: option.stops,
-        isEcoFriendly: option.isEcoFriendly || false,
+        stops: option.stops === 0 ? 'Direct' : `${option.stops} stops`,
+        isEco: option.isEcoFriendly || false,
         isFastest: option.isFastest || false,
         isCheapest: option.isCheapest || false,
-        isBestOverall: option.isBestOverall || false,
+        isBest: option.isBestOverall || false,
         route: option.route,
-        departureTime: option.departureTime,
-        arrivalTime: option.arrivalTime,
+        co2: option.co2 || 0,
       });
     });
   });

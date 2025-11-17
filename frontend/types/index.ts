@@ -4,7 +4,7 @@ export type TransportMode = 'train' | 'bus' | 'taxi' | 'subway';
 
 export type TabType = 'best' | 'cheapest' | 'fastest' | 'eco';
 
-export type ViewType = 'home' | 'results' | 'insights' | 'login' | 'register' | 'account' | 'transfers';
+export type ViewType = 'home' | 'results' | 'insights' | 'login' | 'register' | 'account' | 'transfers' | 'terminal-transfers';
 
 export interface TransportOption {
   id: string;
@@ -23,13 +23,21 @@ export interface TransportOption {
 }
 
 export interface FilterState {
-  maxPrice: number;
   transportModes: {
     train: boolean;
     bus: boolean;
     taxi: boolean;
     subway: boolean;
   };
+  stops: {
+    direct: boolean;
+    oneOrMore: boolean;
+  };
+  maxTime: number;
+  maxPrice: number;
+  departureTime: [number, number];
+  flexibleTicketsOnly: boolean;
+  firstClassOnly: boolean;
 }
 
 export interface UserState {
