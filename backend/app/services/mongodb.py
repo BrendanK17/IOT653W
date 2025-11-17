@@ -2,6 +2,7 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from dotenv import load_dotenv
 import os
+from typing import Any
 
 load_dotenv()
 
@@ -10,7 +11,9 @@ MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
 TESTING = os.getenv("TESTING", "0").lower() in ("1", "true", "yes")
 
 # Create a client. When testing, prefer an in-memory mongomock client to avoid network calls.
-client: MongoClient | object
+# Use `Any` here so type checkers accept index access like `client[DB_NAME]` for both
+# the real `MongoClient` and `mongomock.MongoClient`.
+client: Any
 
 if TESTING:
     try:
