@@ -5,11 +5,17 @@ import json
 
 load_dotenv()
 
+# Allow tests to run without real API keys by setting TESTING=1 in the environment.
+TESTING = os.getenv("TESTING", "0").lower() in ("1", "true", "yes")
+
 CLIMATIQ_API_KEY = os.getenv("CLIMATIQ_API_KEY")
-if not CLIMATIQ_API_KEY:
+if not CLIMATIQ_API_KEY and not TESTING:
     raise ValueError("CLIMATIQ_API_KEY is not set")
 
-HEADERS = {"Authorization": f"Bearer {CLIMATIQ_API_KEY}"}
+# If testing, leave headers empty so requests can be patched/mocked in tests.
+HEADERS = (
+    {"Authorization": f"Bearer {CLIMATIQ_API_KEY}"} if CLIMATIQ_API_KEY else {}
+)
 
 SEARCH_URL = "https://api.climatiq.io/data/v1/search"
 ESTIMATE_URL = "https://api.climatiq.io/data/v1/estimate"
