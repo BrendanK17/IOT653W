@@ -7,6 +7,9 @@ server/node_modules
 .vscode
 .DS_Store
 
+# Coverage reports
+coverage/
+
 # Python
 __pycache__/
 *.pyc
