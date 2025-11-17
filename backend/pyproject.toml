@@ -21,6 +21,7 @@ black = "^24.0"
 mypy = "^1.5"
 pytest = "^8.0"
 types-requests = "^2.32.4"
+mongomock = "^4.1"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
