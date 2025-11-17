@@ -19,6 +19,7 @@ dependencies = [
 [tool.poetry.group.dev.dependencies]
 black = "^24.0"
 mypy = "^1.5"
+pytest = "^8.0"
 types-requests = "^2.32.4"
 
 [build-system]
