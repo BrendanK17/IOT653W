@@ -5,6 +5,7 @@ import { FilterSidebar } from './transport/FilterSidebar';
 import { TransferList } from './transport/TransferList';
 import type { FilterState } from './transport/FilterSidebar';
 import { Button } from './ui/button';
+import { SearchBox, AirportDropdown } from './search/SearchComponents';
 
 interface TransfersPageProps {
   isLoggedIn: boolean;
@@ -12,6 +13,8 @@ interface TransfersPageProps {
   selectedAirport: string;
   searchQuery: string;
   transportOptions: TransportOption[];
+  onAirportSelect: (airport: string) => void;
+  airports: string[];
 }
 
 const TransfersPage = ({
@@ -19,6 +22,9 @@ const TransfersPage = ({
   onNavigate,
   selectedAirport,
   transportOptions,
+  onAirportSelect,
+  airports,
+  searchQuery: initialSearchQuery,
 }: TransfersPageProps) => {
   const [filters, setFilters] = useState<FilterState>({
     transportModes: {
@@ -41,6 +47,9 @@ const TransfersPage = ({
   const [sortBy] = useState<string>('price');
 
   const [activeTab, setActiveTab] = useState('best-overall');
+
+  const [searchValue, setSearchValue] = useState(selectedAirport || initialSearchQuery || '');
+  const [showDropdown, setShowDropdown] = useState(false);
 
   // Sort and filter transport options based on the active tab
   const getDurationInMinutes = (duration: string): number => {
@@ -79,11 +88,41 @@ const TransfersPage = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14">
             <div className="flex items-center space-x-4">
-              <h2 className="text-lg font-semibold">
-                {selectedAirport}
-              </h2>
+              <div className="relative">
+                <SearchBox
+                  searchQuery={searchValue}
+                  onSearchChange={setSearchValue}
+                  onFocus={() => setShowDropdown(true)}
+                  onBlur={() => setShowDropdown(false)}
+                  className="w-80"
+                />
+                <AirportDropdown
+                  searchQuery={searchValue}
+                  showDropdown={showDropdown}
+                  airports={airports}
+                  onSelect={(airport) => {
+                    setSearchValue(airport);
+                    setShowDropdown(false);
+                    onAirportSelect(airport);
+                  }}
+                />
+              </div>
             </div>
             <div className="flex items-center space-x-4">
+              <Button
+                variant="outline"
+                onClick={() => onNavigate('terminal-transfers')}
+                className="text-gray-700 hover:bg-gray-100"
+              >
+                Terminal Transfer Details
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => onNavigate('insights')}
+                className="text-gray-700 hover:bg-gray-100"
+              >
+                Insights
+              </Button>
               <Button
                 variant="ghost"
                 onClick={() => onNavigate('results')}
@@ -139,6 +178,19 @@ const TransfersPage = ({
               selectedAirport={selectedAirport}
               sortBy={sortBy}
             />
+
+            {/* Pro Tips Section */}
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-4">Pro Tips</h3>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li>• Allow at least 60-90 minutes for international flights</li>
+                  <li>• Check transport schedules in advance</li>
+                  <li>• Consider traffic conditions during peak hours</li>
+                  <li>• Have your Oyster card or contactless payment ready</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </main>
       </div>

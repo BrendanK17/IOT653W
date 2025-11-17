@@ -3,9 +3,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 import { TrendingUp } from "lucide-react";
 import { InsightCards, type InsightMetrics } from "./insights/InsightCards";
 import { ChartSection } from "./insights/ChartSection";
-import { TransportTable } from "./insights/TransportTable";
 import { MainLayout } from './layout/MainLayout';
 import { Button } from './ui/button';
+import { Moon, Sun } from 'lucide-react';
 import { ViewType } from '../types';
 
 interface NewInsightsPageProps {
@@ -25,19 +25,15 @@ const insights: InsightMetrics = {
     subtext: "15 mins"
   },
   topRated: {
-    value: "Gatwick Express",
-    subtext: "4.8/5 rating"
+    value: "Piccadilly Line",
+    subtext: "£6"
   }
 };
 
-const recentRoutes = [
-  { route: "Heathrow → Paddington", mode: "Train", duration: "15 mins", price: "£25" },
-  { route: "Gatwick → Victoria", mode: "Train", duration: "30 mins", price: "£20" },
-  { route: "Stansted → Liverpool St", mode: "Train", duration: "45 mins", price: "£19" }
-];
-
 const NewInsightsPage: React.FC<NewInsightsPageProps> = ({
+  darkMode,
   isLoggedIn,
+  onDarkModeChange,
   onNavigate
 }) => {
   return (
@@ -54,8 +50,16 @@ const NewInsightsPage: React.FC<NewInsightsPageProps> = ({
             <p className="text-muted-foreground">Data-driven analysis of airport transfer options</p>
           </div>
           <div className="flex items-center space-x-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onDarkModeChange(!darkMode)}
+              aria-label="Toggle dark mode"
+            >
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
             <Button variant="outline" onClick={() => onNavigate('results')} className="hidden sm:inline-flex">
-              View Results
+              Back to Results
             </Button>
           </div>
         </div>
@@ -74,10 +78,22 @@ const NewInsightsPage: React.FC<NewInsightsPageProps> = ({
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl font-semibold">Recent Transport Options</CardTitle>
+              <CardTitle className="text-xl font-semibold">Time vs Cost Analysis</CardTitle>
             </CardHeader>
             <CardContent>
-              <TransportTable routes={recentRoutes} />
+              <p className="text-muted-foreground">Analysis of travel time versus cost for different transport options.</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold">Route Map</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center">
+                <span>Airport</span>
+                <span>→</span>
+                <span>City Centre</span>
+              </div>
             </CardContent>
           </Card>
         </div>
