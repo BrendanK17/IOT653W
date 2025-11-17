@@ -10,7 +10,9 @@ interface TimePickerProps {
 }
 
 export const TimePicker: React.FC<TimePickerProps> = ({ value, onChange }) => {
-  const [hours, minutes] = value.split(':').map(Number);
+  const parts = value.split(':');
+  const hours = parseInt(parts[0] || '0', 10);
+  const minutes = parseInt(parts[1] || '0', 10);
   
   const incrementHours = () => {
     const newHours = (hours + 1) % 24;

@@ -51,13 +51,13 @@ export const InsightCards: React.FC<InsightCardsProps> = ({ metrics }) => {
         subtext={metrics.ecoFriendly.subtext}
       />
       <MetricCard
-        title="Fastest Route"
+        title="Fastest Option"
         icon="speed"
         value={metrics.fastest.value}
         subtext={metrics.fastest.subtext}
       />
       <MetricCard
-        title="Top Rated"
+        title="Most Affordable"
         icon="rating"
         value={metrics.topRated.value}
         subtext={metrics.topRated.subtext}

@@ -15,7 +15,7 @@ export function TransferList({
   transportOptions,
   filters,
   selectedAirport,
-  sortBy
+  sortBy: _sortBy
 }: TransferListProps) {
   const [selectedTransfer, setSelectedTransfer] = useState<TransportOption | null>(null);
   const airportCode = selectedAirport.match(/\(([^)]+)\)/)?.[1] || selectedAirport;
@@ -38,18 +38,6 @@ export function TransferList({
             if (!filters.stops.direct && !filters.stops.oneOrMore) return true;
             const hasStops = t.stops && t.stops.toLowerCase().includes('stop');
             return filters.stops.direct ? !hasStops : hasStops;
-          })
-          .sort((a, b) => {
-            switch (sortBy) {
-              case 'price':
-                return Number(a.price) - Number(b.price);
-              case 'duration':
-                return a.duration.localeCompare(b.duration);
-              case 'eco':
-                return Number(b.isEco) - Number(a.isEco);
-              default:
-                return 0;
-            }
           })
           .map((transfer) => (
             <TransportCard

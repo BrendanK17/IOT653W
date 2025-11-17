@@ -8,7 +8,6 @@ import { ViewType } from '../../types';
 import { AccountPage } from '../AccountPage';
 
 interface HomePageProps {
-  darkMode: boolean;
   isLoggedIn: boolean;
   searchQuery: string;
   onSearchChange: (value: string) => void;
@@ -17,7 +16,6 @@ interface HomePageProps {
   showDropdown: boolean;
   onShowDropdown: (show: boolean) => void;
   onAirportSelect: (airport: string) => void;
-  onDarkModeChange: (value: boolean) => void;
   onNavigate: (view: ViewType) => void;
   airports: string[];
   userEmail?: string;
@@ -25,7 +23,6 @@ interface HomePageProps {
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
-  darkMode,
   isLoggedIn,
   searchQuery,
   onSearchChange,
@@ -34,7 +31,6 @@ export const HomePage: React.FC<HomePageProps> = ({
   showDropdown,
   onShowDropdown,
   onAirportSelect,
-  onDarkModeChange,
   onNavigate,
   airports,
   userEmail = '',
@@ -46,8 +42,6 @@ export const HomePage: React.FC<HomePageProps> = ({
   if (currentView === 'account') {
     return (
       <AccountPage
-        darkMode={darkMode}
-        setDarkMode={onDarkModeChange}
         userEmail={userEmail}
         defaultAirport={defaultAirport}
         setDefaultAirport={setDefaultAirport}
@@ -72,9 +66,7 @@ export const HomePage: React.FC<HomePageProps> = ({
       </div>
 
       <Header
-        darkMode={darkMode}
         isLoggedIn={isLoggedIn}
-        onDarkModeChange={onDarkModeChange}
         onNavigate={(view) => {
           if (view === 'account') {
             setCurrentView('account');

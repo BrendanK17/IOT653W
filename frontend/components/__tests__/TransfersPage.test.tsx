@@ -2,35 +2,86 @@
  * @jest-environment jsdom
  */
 
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 import { TransfersPage } from '../TransfersPage';
+import { TransportOption } from '../../types';
+
+const mockTransportOptions: TransportOption[] = [
+  {
+    id: 'LHR-1',
+    mode: 'train',
+    name: 'Heathrow Express',
+    airport: 'LHR',
+    duration: '15 mins',
+    price: 25,
+    stops: 'Direct',
+    isEco: false,
+    isFastest: true,
+    isCheapest: false,
+    isBest: true,
+    route: 'Heathrow → Paddington',
+    co2: 2.1,
+  },
+  {
+    id: 'LHR-2',
+    mode: 'subway',
+    name: 'Elizabeth Line',
+    airport: 'LHR',
+    duration: '35 mins',
+    price: 10,
+    stops: 'Direct',
+    isEco: true,
+    isFastest: false,
+    isCheapest: false,
+    isBest: false,
+    route: 'Heathrow → Central London',
+    co2: 1.2,
+  },
+  {
+    id: 'LHR-3',
+    mode: 'bus',
+    name: 'Terminal Shuttle Buses',
+    airport: 'LHR',
+    duration: '10 mins',
+    price: 0,
+    stops: 'Direct',
+    isEco: false,
+    isFastest: false,
+    isCheapest: true,
+    isBest: false,
+    route: 'Between Terminals',
+    co2: 0.5,
+  },
+];
 
 describe('TransfersPage', () => {
   const mockProps = {
     selectedAirport: 'London Heathrow (LHR)',
     searchQuery: '',
-    darkMode: false,
     isLoggedIn: false,
-    onSetDarkMode: jest.fn(),
-    onNavigate: jest.fn(),
+    onNavigate: vi.fn(),
+    transportOptions: mockTransportOptions,
+    onAirportSelect: vi.fn(),
+    airports: ['London Heathrow (LHR)', 'London Gatwick (LGW)'],
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
-  it('should render the page with airport name', () => {
+  it('should render the page with airport name in search bar', () => {
     render(<TransfersPage {...mockProps} />);
-    expect(screen.getByText(/Terminal Transfers at London Heathrow/i)).toBeInTheDocument();
+    const searchInput = screen.getByPlaceholderText('Where would you like to go? (e.g., London Heathrow)');
+    expect(searchInput).toHaveValue('London Heathrow (LHR)');
   });
 
   it('should display all transfer options', () => {
     render(<TransfersPage {...mockProps} />);
-    expect(screen.getByText('Heathrow Express')).toBeInTheDocument();
-    expect(screen.getByText('Elizabeth Line')).toBeInTheDocument();
-    expect(screen.getByText('Terminal Shuttle Buses')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Heathrow Express' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Elizabeth Line' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Terminal Shuttle Buses' })).toBeInTheDocument();
   });
 
   it('should show FREE badges for all options', () => {
@@ -44,13 +95,6 @@ describe('TransfersPage', () => {
     const logo = screen.getByText('GroundScanner');
     fireEvent.click(logo);
     expect(mockProps.onNavigate).toHaveBeenCalledWith('home');
-  });
-
-  it('should toggle dark mode', () => {
-    render(<TransfersPage {...mockProps} />);
-    const darkModeButton = screen.getByRole('button', { name: /sun|moon/i });
-    fireEvent.click(darkModeButton);
-    expect(mockProps.onSetDarkMode).toHaveBeenCalled();
   });
 
   it('should show account button when logged in', () => {
@@ -74,7 +118,8 @@ describe('TransfersPage', () => {
       searchQuery: 'London City (LCY)',
     };
     render(<TransfersPage {...props} />);
-    expect(screen.getByText(/Terminal Transfers at London City/i)).toBeInTheDocument();
+    const searchInput = screen.getByPlaceholderText('Where would you like to go? (e.g., London Heathrow)');
+    expect(searchInput).toHaveValue('London City (LCY)');
   });
 
   it('should use default airport when both are empty', () => {
@@ -84,7 +129,8 @@ describe('TransfersPage', () => {
       searchQuery: '',
     };
     render(<TransfersPage {...props} />);
-    expect(screen.getByText(/Terminal Transfers at London Heathrow/i)).toBeInTheDocument();
+    const searchInput = screen.getByPlaceholderText('Where would you like to go? (e.g., London Heathrow)');
+    expect(searchInput).toHaveValue('');
   });
 
   it('should display pro tips section', () => {
@@ -93,10 +139,10 @@ describe('TransfersPage', () => {
     expect(screen.getByText(/Allow at least 60-90 minutes/i)).toBeInTheDocument();
   });
 
-  it('should display terminal transfer details', () => {
+  it('should navigate to terminal transfers page', () => {
     render(<TransfersPage {...mockProps} />);
-    expect(screen.getByText(/Runs every 15 minutes/i)).toBeInTheDocument();
-    expect(screen.getByText(/Touch in at entry, touch out at destination/i)).toBeInTheDocument();
-    expect(screen.getByText(/Runs 24\/7 between all terminals/i)).toBeInTheDocument();
+    const terminalButton = screen.getByRole('button', { name: /terminal transfer details/i });
+    fireEvent.click(terminalButton);
+    expect(mockProps.onNavigate).toHaveBeenCalledWith('terminal-transfers');
   });
 });

@@ -11,8 +11,6 @@ interface AuthLayoutProps {
   title: string;
   description: string;
   children: React.ReactNode;
-  darkMode: boolean;
-  onDarkModeChange: (value: boolean) => void;
   onNavigate: (view: ViewType) => void;
 }
 
@@ -20,10 +18,8 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
   title,
   description,
   children,
-  darkMode,
-  onDarkModeChange,
   onNavigate
-}) => {
+}: AuthLayoutProps) => {
   return (
     <div className="min-h-screen relative">
       <div className="fixed inset-0 -z-10">
@@ -36,9 +32,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
       </div>
       
       <Header
-        darkMode={darkMode}
         isLoggedIn={false}
-        onDarkModeChange={onDarkModeChange}
         onNavigate={onNavigate}
         className="relative backdrop-blur-sm bg-white/5 border-b border-white/10"
       />
@@ -120,15 +114,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({
 export const LoginForm: React.FC<{
   onLogin: (email: string) => void;
   onNavigate: (view: ViewType) => void;
-  darkMode: boolean;
-  onDarkModeChange: (value: boolean) => void;
-}> = ({ onLogin, onNavigate, darkMode, onDarkModeChange }) => {
+}> = ({ onLogin, onNavigate }) => {
   return (
     <AuthLayout
       title="Welcome back"
       description="Log in to your GroundScanner account"
-      darkMode={darkMode}
-      onDarkModeChange={onDarkModeChange}
       onNavigate={onNavigate}
     >
       <AuthForm
@@ -146,15 +136,11 @@ export const LoginForm: React.FC<{
 export const RegisterForm: React.FC<{
   onRegister: (email: string) => void;
   onNavigate: (view: ViewType) => void;
-  darkMode: boolean;
-  onDarkModeChange: (value: boolean) => void;
-}> = ({ onRegister, onNavigate, darkMode, onDarkModeChange }) => {
+}> = ({ onRegister, onNavigate }) => {
   return (
     <AuthLayout
       title="Create an account"
       description="Join GroundScanner today"
-      darkMode={darkMode}
-      onDarkModeChange={onDarkModeChange}
       onNavigate={onNavigate}
     >
       <AuthForm

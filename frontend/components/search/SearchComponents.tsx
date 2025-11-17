@@ -44,6 +44,7 @@ interface SearchBoxProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
   onFocus: () => void;
+  onBlur?: () => void;
   className?: string;
 }
 
@@ -51,6 +52,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   searchQuery,
   onSearchChange,
   onFocus,
+  onBlur,
   className
 }) => {
   return (
@@ -61,6 +63,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           onFocus={onFocus}
+          onBlur={onBlur}
           placeholder="Where would you like to go? (e.g., London Heathrow)"
           className="border-none outline-none shadow-none text-base sm:text-lg p-0 bg-transparent text-gray-900"
         />
