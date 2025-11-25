@@ -2,6 +2,7 @@ import { MainLayout } from "./layout/MainLayout"
 import { UserInfoCard } from "./account/UserInfoCard"
 import { DefaultAirportCard } from "./account/DefaultAirportCard"
 import { LogoutCard } from "./account/LogoutCard"
+import DeleteAccountCard from "./account/DeleteAccountCard"
 import { ViewType } from "../types"
 
 interface AccountPageProps {
@@ -43,6 +44,18 @@ export function AccountPage({
 
         <div className="space-y-6">
           <UserInfoCard userEmail={userEmail} />
+          
+          
+          <DeleteAccountCard
+            userEmail={userEmail}
+            onDeleted={() => {
+              // clear local state and navigate home
+              setIsLoggedIn(false);
+              setUserEmail('');
+              setDefaultAirport('');
+              onNavigateHome();
+            }}
+          />
           
           <DefaultAirportCard
             defaultAirport={defaultAirport}

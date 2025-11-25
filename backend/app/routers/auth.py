@@ -17,6 +17,7 @@ from typing import Optional
 from bson import ObjectId
 from datetime import timedelta
 import os
+import re
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -33,9 +34,23 @@ REFRESH_COOKIE_SECURE = os.getenv("REFRESH_COOKIE_SECURE", "true").lower() in (
 
 @router.post("/register", status_code=201)
 async def register(req: schemas.RegisterRequest):
+    # Server-side password policy enforcement
+    pwd = req.password
+    rules = {
+        "minLength": len(pwd) >= 8,
+        "hasLower": bool(re.search(r"[a-z]", pwd)),
+        "hasUpper": bool(re.search(r"[A-Z]", pwd)),
+        "hasNumber": bool(re.search(r"[0-9]", pwd)),
+        "hasSpecial": bool(re.search(r"[^A-Za-z0-9]", pwd)),
+    }
+    unmet = [k for k, ok in rules.items() if not ok]
+    if unmet:
+        raise HTTPException(status_code=400, detail={"error": "Password does not meet requirements", "unmet": unmet})
+
     existing = find_user_by_email(req.email)
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
+
     user = create_user(req.email, req.password)
     # create verification token (in real app, email this link)
     token = generate_and_store_verification_token(user["_id"])
@@ -140,6 +155,11 @@ async def reset_password_request(req: schemas.ResetPasswordRequest):
 
 @router.post("/reset-password")
 async def reset_password(body: schemas.ResetPasswordConfirm):
+    # Validate new password server-side
+    pwd = body.password
+    if len(pwd) < 8 or not re.search(r"[a-z]", pwd) or not re.search(r"[A-Z]", pwd) or not re.search(r"[0-9]", pwd) or not re.search(r"[^A-Za-z0-9]", pwd):
+        raise HTTPException(status_code=400, detail="Password does not meet complexity requirements")
+
     user_id = confirm_and_consume_reset_token(body.token)
     if not user_id:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")

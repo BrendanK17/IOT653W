@@ -8,6 +8,8 @@ import { TerminalTransfersPage } from './components/TerminalTransfersPage';
 import { AccountPage } from './components/AccountPage';
 import { airports, transportOptions as rawTransportOptions } from './utils/mockData';
 import { ViewType, TransportOption } from './types';
+import { useToast } from './components/ui/Toast';
+import { refreshAccessToken, parseJwt } from './utils/api';
 
 // Convert airports data structure to simple array for backward compatibility
 const mockAirports = Object.entries(airports).flatMap(([city, airportList]) =>
@@ -218,6 +220,7 @@ const InsightsPageWrapper = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
 
 function App() {
   const navigate = useNavigate();
+  const toast = useToast();
 
   // User state
   const [userState, setUserState] = useState({
@@ -287,16 +290,64 @@ function App() {
     setAppState(prev => ({ ...prev, darkMode: value }));
   };
 
-  const handleLogin = (email: string) => {
-    setUserState({
-      isLoggedIn: true,
-      email,
-      defaultAirport: '',
-    });
-    navigate('/');
+  // login using top-level alias
+  const handleLoginApi = async (email: string, password: string) => {
+    try {
+      const res = await fetch(`${(import.meta as any).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // send/receive refresh cookie
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.showToast(err.detail || 'Login failed', 'error');
+        return;
+      }
+      const data = await res.json();
+      // store access token locally
+      if (data.access_token) {
+        localStorage.setItem('access_token', data.access_token);
+      }
+      setUserState({ isLoggedIn: true, email, defaultAirport: '' });
+      toast.showToast('Logged in', 'success');
+      navigate('/');
+    } catch (e) {
+      console.error(e);
+      toast.showToast('Login error', 'error');
+    }
   };
 
-  const handleLogout = () => {
+  const handleRegister = async (email: string, password: string) => {
+    try {
+      const res = await fetch(`${(import.meta as any).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.showToast(body.detail || 'Registration failed', 'error');
+        return;
+      }
+      toast.showToast('Registered successfully', 'success');
+      navigate('/login');
+    } catch (e) {
+      console.error(e);
+      toast.showToast('Registration error', 'error');
+    }
+  };
+
+  // `parseJwt`, `refreshAccessToken`, and `apiFetch` are imported from `./utils/api`
+
+  const handleLogout = async () => {
+    try {
+      await fetch(`${(import.meta as any).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      // ignore network errors during logout
+      console.error('logout error', e);
+    }
+    localStorage.removeItem('access_token');
     setUserState({
       isLoggedIn: false,
       email: '',
@@ -305,14 +356,25 @@ function App() {
     navigate('/');
   };
 
+  // On app start, try to refresh access token (if refresh cookie present)
+  useEffect(() => {
+    (async () => {
+      const token = await refreshAccessToken();
+      if (token) {
+        const payload = parseJwt(token);
+        setUserState({ isLoggedIn: true, email: (payload && payload.email) || '', defaultAirport: '' });
+      }
+    })();
+  }, []);
+
   // Determine what to render based on both URL and state
   return (
-    <Routes>
+      <Routes>
       <Route 
         path="/login" 
         element={
           <LoginForm
-            onLogin={handleLogin}
+            onLogin={handleLoginApi}
             onNavigate={handleNavigate}
           />
         }
@@ -322,7 +384,7 @@ function App() {
         path="/register" 
         element={
           <RegisterForm
-            onRegister={handleLogin}
+            onRegister={handleRegister}
             onNavigate={handleNavigate}
           />
         }
