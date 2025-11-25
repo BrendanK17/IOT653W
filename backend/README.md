@@ -28,7 +28,7 @@ Open your browser or API client at:
 ```bash
 http://127.0.0.1:8000
 ```
-F
+
 Interactive Swagger docs:
 ```bash
 http://127.0.0.1:8000/docs
