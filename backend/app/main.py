@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import api
+from app.routers import auth as auth_router
 
-app = FastAPI(title="My FastAPI Backend")
+app = FastAPI(title="GroundScanner Backend")
 
 # Allow requests from your frontend (e.g. localhost:3000)
 origins = [
@@ -19,6 +20,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(api.router)
+app.include_router(auth_router.router)
 
 
 @app.get("/")
