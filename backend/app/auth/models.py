@@ -1,10 +1,10 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 
 
 def now():
-    return datetime.utcnow()
+    return datetime.now(timezone.utc)
 
 
 class User:

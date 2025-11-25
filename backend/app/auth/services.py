@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 from bson import ObjectId
 from argon2 import PasswordHasher
@@ -58,8 +58,8 @@ def create_user(email: str, password: str) -> dict:
         "email": email.lower(),
         "hashed_password": hashed,
         "verified": False,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     }
     res = users_col.insert_one(doc)
     doc["_id"] = res.inserted_id
@@ -73,12 +73,12 @@ def find_user_by_email(email: str) -> Optional[dict]:
 def generate_and_store_verification_token(user_id: ObjectId) -> str:
     token = generate_token_string()
     token_hash = hash_token(token)
-    expires = datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_HOURS)
+    expires = datetime.now(timezone.utc) + timedelta(hours=VERIFICATION_TOKEN_HOURS)
     verify_col.insert_one(
         {
             "user_id": user_id,
             "token_hash": token_hash,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
             "expiresAt": expires,
         }
     )
@@ -97,7 +97,7 @@ def confirm_verification_token(email: str, token: str) -> bool:
         return False
     users_col.update_one(
         {"_id": user["_id"]},
-        {"$set": {"verified": True, "updated_at": datetime.utcnow()}},
+        {"$set": {"verified": True, "updated_at": datetime.now(timezone.utc)}},
     )
     return True
 
@@ -105,12 +105,12 @@ def confirm_verification_token(email: str, token: str) -> bool:
 def generate_and_store_password_reset_token(user_id: ObjectId) -> str:
     token = generate_token_string()
     token_hash = hash_token(token)
-    expires = datetime.utcnow() + timedelta(hours=RESET_TOKEN_HOURS)
+    expires = datetime.now(timezone.utc) + timedelta(hours=RESET_TOKEN_HOURS)
     pwreset_col.insert_one(
         {
             "user_id": user_id,
             "token_hash": token_hash,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
             "expiresAt": expires,
         }
     )
@@ -128,11 +128,11 @@ def confirm_and_consume_reset_token(token: str) -> Optional[ObjectId]:
 def create_refresh_token_doc(user_id: ObjectId) -> Tuple[str, dict]:
     token = generate_token_string()
     token_hash = hash_token(token)
-    expires = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_DAYS)
+    expires = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_DAYS)
     doc = {
         "user_id": user_id,
         "token_hash": token_hash,
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
         "expiresAt": expires,
         "revoked": False,
     }
@@ -178,5 +178,5 @@ def set_user_password(user_id: ObjectId, password: str):
     hashed = hash_password(password)
     users_col.update_one(
         {"_id": user_id},
-        {"$set": {"hashed_password": hashed, "updated_at": datetime.utcnow()}},
+        {"$set": {"hashed_password": hashed, "updated_at": datetime.now(timezone.utc)}},
     )
