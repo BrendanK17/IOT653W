@@ -3,11 +3,22 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Search, MapPin, Plane } from 'lucide-react';
 
+export type AirportOption = {
+  id: string;
+  display: string; // e.g., "Heathrow Airport (LHR)" or "London (ALL)"
+  value: string; // code to navigate to (IATA or city code)
+  type: 'airport' | 'city_all';
+  iata?: string | null;
+  name?: string;
+  city?: string;
+  aliases?: string[];
+};
+
 interface AirportDropdownProps {
   searchQuery: string;
   showDropdown: boolean;
-  airports: string[];
-  onSelect: (airport: string) => void;
+  airports: AirportOption[];
+  onSelect: (display: string, code: string) => void;
 }
 
 export const AirportDropdown: React.FC<AirportDropdownProps> = ({
@@ -18,21 +29,27 @@ export const AirportDropdown: React.FC<AirportDropdownProps> = ({
 }) => {
   if (!showDropdown || !searchQuery) return null;
 
-  const filteredAirports = airports.filter(airport =>
-    airport.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const q = searchQuery.toLowerCase().trim();
+
+  const filtered = airports.filter(opt => {
+    if (!q) return true;
+    const hay = [opt.display, opt.city || '', opt.iata || '', ...(opt.aliases || [])].join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+
+  if (filtered.length === 0) return null;
 
   return (
     <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 mt-1 max-h-60 overflow-y-auto">
-      {filteredAirports.map((airport, index) => (
+      {filtered.map((opt) => (
         <button
-          key={index}
+          key={opt.id}
           className="w-full text-left px-4 py-3 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg transition-colors text-gray-900"
-          onClick={() => onSelect(airport)}
+          onClick={() => onSelect(opt.display, opt.value)}
         >
           <div className="flex items-center space-x-2">
             <Plane className="w-4 h-4 text-blue-500" />
-            <span>{airport}</span>
+            <span>{opt.display}</span>
           </div>
         </button>
       ))}

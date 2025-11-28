@@ -7,11 +7,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select"
+import type { AirportOption } from '../search/SearchComponents';
 
 interface DefaultAirportCardProps {
   defaultAirport: string
   setDefaultAirport: (value: string) => void
-  airports: string[]
+  airports: AirportOption[]
 }
 
 export function DefaultAirportCard({
@@ -37,9 +38,9 @@ export function DefaultAirportCard({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">None</SelectItem>
-              {airports.map((airport) => (
-                <SelectItem key={airport} value={airport}>
-                  {airport}
+              {airports.map((opt) => (
+                <SelectItem key={opt.id} value={opt.display}>
+                  {opt.display}
                 </SelectItem>
               ))}
             </SelectContent>

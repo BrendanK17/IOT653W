@@ -16,21 +16,37 @@ export const parseJwt = (token: string | null) => {
 };
 
 export const refreshAccessToken = async (): Promise<string | null> => {
-  try {
-    const res = await fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.access_token) {
-      localStorage.setItem('access_token', data.access_token);
-      return data.access_token;
-    }
-  } catch (e) {
-    console.error('refresh error', e);
+  // Deduplicate concurrent refresh requests by reusing the same in-flight promise
+  if ((refreshAccessToken as any)._inFlight) {
+    return (refreshAccessToken as any)._inFlight;
   }
-  return null;
+
+  const promise = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data.access_token) {
+        localStorage.setItem('access_token', data.access_token);
+        return data.access_token;
+      }
+    } catch (e) {
+      console.error('refresh error', e);
+    }
+    return null;
+  })();
+
+  (refreshAccessToken as any)._inFlight = promise;
+  try {
+    const result = await promise;
+    return result;
+  } finally {
+    // clear in-flight so future refreshes are possible
+    (refreshAccessToken as any)._inFlight = null;
+  }
 };
 
 export const apiFetch = async (path: string, options: RequestInit = {}) => {
