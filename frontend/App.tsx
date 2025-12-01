@@ -16,14 +16,6 @@ import type { AirportOption } from './components/search/SearchComponents';
 let __refreshRan = false;
 let __airportsLoaded = false;
 
-// We'll fetch airports from the backend on app load and build a searchable index
-const mockAirports = Object.entries(airports).flatMap(([city, airportList]) =>
-  airportList.map(airport => {
-    const cityName = city === 'London (All Airports)' ? 'London' : city;
-    return `${cityName} ${airport.name.replace(' Airport', '')} (${airport.code})`;
-  })
-);
-
 // Helper function to extract airport code from formatted string
 const extractAirportCode = (airportString: string): string => {
   const match = airportString.match(/\(([A-Z]{3})\)/);
@@ -49,17 +41,38 @@ const convertTransportOptions = (options: any[], airportCode: string): Transport
   }));
 };
 
-// Helper function to get airport name from code
-const getAirportNameFromCode = (code: string): string => {
-  const upperCode = code.toUpperCase();
-  for (const [city, airportList] of Object.entries(airports)) {
-    const airport = airportList.find(a => a.code === upperCode);
-    if (airport) {
-      const cityName = city === 'London (All Airports)' ? 'London' : city;
-      return `${cityName} ${airport.name.replace(' Airport', '')} (${airport.code})`;
+// Helper function to get airport name from code.
+// It prefers the loaded `airportOptions` (from backend) when provided,
+// falling back to the `airports` mockData lookup for compatibility.
+const getAirportNameFromCode = (code: string, airportOptionsList?: AirportOption[]): string => {
+  const upperCode = (code || '').toUpperCase();
+
+  // Prefer loaded airport options if provided
+  if (airportOptionsList && airportOptionsList.length) {
+    // Try to match by IATA code first
+    const byIata = airportOptionsList.find(o => o.iata && o.iata.toUpperCase() === upperCode);
+    if (byIata) {
+      if (byIata.type === 'city_all') {
+        return `${byIata.city} (ALL)`;
+      }
+      const city = byIata.city || '';
+      const name = (byIata.name || '').replace(' Airport', '');
+      const codeToShow = byIata.iata || (byIata.value || upperCode);
+      return `${city ? city + ' ' : ''}${name} (${codeToShow})`.trim();
+    }
+
+    // If not matched by iata, try the `value` field (used for some city/all entries)
+    const byValue = airportOptionsList.find(o => (o.value || '').toUpperCase() === upperCode);
+    if (byValue) {
+      if (byValue.type === 'city_all') {
+        return `${byValue.city} (ALL)`;
+      }
+      const city = byValue.city || '';
+      const name = (byValue.name || '').replace(' Airport', '');
+      const codeToShow = byValue.iata || (byValue.value || upperCode);
+      return `${city ? city + ' ' : ''}${name} (${codeToShow})`.trim();
     }
   }
-  return '';
 };
 
 // Wrapper component for TransfersPage that reads URL params
@@ -67,7 +80,7 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
   const { airportCode } = useParams<{ airportCode: string }>();
   const navigate = useNavigate();
   
-  const airportName = getAirportNameFromCode(airportCode || '');
+  const airportName = getAirportNameFromCode(airportCode || '', airports);
   const transportOptions = airportCode ? convertTransportOptions(
     rawTransportOptions[(airportCode.toUpperCase()) as keyof typeof rawTransportOptions] || [],
     airportCode.toUpperCase()
@@ -122,11 +135,11 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
 };
 
 // Wrapper component for TerminalTransfersPage that reads URL params
-const TerminalTransfersPageWrapper = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
+const TerminalTransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; airports: AirportOption[] }) => {
   const { airportCode } = useParams<{ airportCode: string }>();
   const navigate = useNavigate();
 
-  const airportName = getAirportNameFromCode(airportCode || '');
+  const airportName = getAirportNameFromCode(airportCode || '', airports);
 
   // Redirect to home if invalid airport code
   if (!airportName && airportCode) {
@@ -168,11 +181,11 @@ const TerminalTransfersPageWrapper = ({ isLoggedIn }: { isLoggedIn: boolean }) =
 };
 
 // Wrapper component for InsightsPage that reads URL params
-const InsightsPageWrapper = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
+const InsightsPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; airports: AirportOption[] }) => {
   const { airportCode } = useParams<{ airportCode: string }>();
   const navigate = useNavigate();
 
-  const airportName = getAirportNameFromCode(airportCode || '');
+  const airportName = getAirportNameFromCode(airportCode || '', airports);
 
   // Redirect to home if invalid airport code
   if (!airportName && airportCode) {
@@ -462,7 +475,7 @@ function App() {
               }}
               setUserEmail={(value: string) => setUserState(prev => ({ ...prev, email: value }))}
               onNavigateHome={() => handleNavigate('home')}
-              airports={airportOptions.length ? airportOptions : mockAirports as any}
+              airports={airportOptions}
             />
           ) : (
             <Navigate to="/login" replace />
@@ -505,7 +518,7 @@ function App() {
                     if (code) navigate(`/${code.toLowerCase()}`);
                   }}
                   onNavigate={handleNavigate}
-                  airports={airportOptions.length ? airportOptions : mockAirports as any}
+                  airports={airportOptions}
                   userEmail={userState.email}
                   onLogout={handleLogout}
                 />
@@ -523,13 +536,13 @@ function App() {
       {/* Terminal transfers route */}
       <Route 
         path="/:airportCode/transfers" 
-        element={<TerminalTransfersPageWrapper isLoggedIn={userState.isLoggedIn} />}
+        element={<TerminalTransfersPageWrapper isLoggedIn={userState.isLoggedIn} airports={airportOptions} />}
       />
 
       {/* Insights route */}
       <Route 
         path="/:airportCode/insights" 
-        element={<InsightsPageWrapper isLoggedIn={userState.isLoggedIn} />}
+        element={<InsightsPageWrapper isLoggedIn={userState.isLoggedIn} airports={airportOptions} />}
       />
     </Routes>
   );
