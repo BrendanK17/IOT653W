@@ -5,19 +5,6 @@
 
 import { TransportOption } from '../../types';
 
-export const mockAirports: string[] = [
-  'London Heathrow (LHR)',
-  'London Gatwick (LGW)',
-  'London City (LCY)',
-  'London Stansted (STN)',
-  'London Luton (LTN)',
-  'Manchester (MAN)',
-  'Birmingham (BHX)',
-  'Edinburgh (EDI)',
-  'Glasgow (GLA)',
-  'Bristol (BRS)',
-];
-
 export const mockTransportOptions: TransportOption[] = [
   {
     id: '1',

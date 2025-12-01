@@ -5,6 +5,7 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { Header } from '../layout/Header';
 import { SearchBox, AirportDropdown, SearchButton } from '../search/SearchComponents';
 import { ViewType } from '../../types';
+import type { AirportOption } from '../search/SearchComponents';
 import { AccountPage } from '../AccountPage';
 
 interface HomePageProps {
@@ -15,9 +16,9 @@ interface HomePageProps {
   selectedAirport: string;
   showDropdown: boolean;
   onShowDropdown: (show: boolean) => void;
-  onAirportSelect: (airport: string) => void;
+  onAirportSelect: (display: string, code: string) => void;
   onNavigate: (view: ViewType) => void;
-  airports: string[];
+  airports: AirportOption[];
   userEmail?: string;
   onLogout: () => void;
 }
@@ -41,7 +42,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   if (currentView === 'account') {
     return (
-      <AccountPage
+        <AccountPage
         userEmail={userEmail}
         defaultAirport={defaultAirport}
         setDefaultAirport={setDefaultAirport}
@@ -103,9 +104,9 @@ export const HomePage: React.FC<HomePageProps> = ({
                 searchQuery={searchQuery}
                 showDropdown={showDropdown}
                 airports={airports}
-                onSelect={(airport) => {
-                  onAirportSelect(airport);
-                  onSearchChange(airport);
+                onSelect={(display, code) => {
+                  onAirportSelect(display, code);
+                  onSearchChange(display);
                   onShowDropdown(false);
                 }}
               />

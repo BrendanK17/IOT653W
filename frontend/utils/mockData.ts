@@ -1,36 +1,5 @@
 import type { TransportOption } from '../types';
 
-export const airports = {
-  'London (All Airports)': [
-    { code: 'LHR', name: 'Heathrow Airport' },
-    { code: 'LGW', name: 'Gatwick Airport' },
-    { code: 'STN', name: 'Stansted Airport' },
-    { code: 'LTN', name: 'Luton Airport' },
-    { code: 'LCY', name: 'London City Airport' },
-  ],
-  'Manchester': [
-    { code: 'MAN', name: 'Manchester Airport' },
-  ],
-  'Birmingham': [
-    { code: 'BHX', name: 'Birmingham Airport' },
-  ],
-  'Edinburgh': [
-    { code: 'EDI', name: 'Edinburgh Airport' },
-  ],
-  'Glasgow': [
-    { code: 'GLA', name: 'Glasgow Airport' },
-  ],
-  'Bristol': [
-    { code: 'BRS', name: 'Bristol Airport' },
-  ],
-  'Newcastle': [
-    { code: 'NCL', name: 'Newcastle Airport' },
-  ],
-  'Liverpool': [
-    { code: 'LPL', name: 'Liverpool Airport' },
-  ],
-};
-
 export const transportOptions = {
   LHR: [
     {

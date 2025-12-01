@@ -4,6 +4,7 @@ import { DefaultAirportCard } from "./account/DefaultAirportCard"
 import { LogoutCard } from "./account/LogoutCard"
 import DeleteAccountCard from "./account/DeleteAccountCard"
 import { ViewType } from "../types"
+import type { AirportOption } from './search/SearchComponents'
 
 interface AccountPageProps {
   userEmail: string
@@ -12,7 +13,7 @@ interface AccountPageProps {
   setIsLoggedIn: (value: boolean) => void
   setUserEmail: (value: string) => void
   onNavigateHome: () => void
-  airports: string[]
+  airports: AirportOption[]
 }
 
 export function AccountPage({
