@@ -45,7 +45,10 @@ async def register(req: schemas.RegisterRequest):
     }
     unmet = [k for k, ok in rules.items() if not ok]
     if unmet:
-        raise HTTPException(status_code=400, detail={"error": "Password does not meet requirements", "unmet": unmet})
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "Password does not meet requirements", "unmet": unmet},
+        )
 
     existing = find_user_by_email(req.email)
     if existing:
@@ -157,8 +160,16 @@ async def reset_password_request(req: schemas.ResetPasswordRequest):
 async def reset_password(body: schemas.ResetPasswordConfirm):
     # Validate new password server-side
     pwd = body.password
-    if len(pwd) < 8 or not re.search(r"[a-z]", pwd) or not re.search(r"[A-Z]", pwd) or not re.search(r"[0-9]", pwd) or not re.search(r"[^A-Za-z0-9]", pwd):
-        raise HTTPException(status_code=400, detail="Password does not meet complexity requirements")
+    if (
+        len(pwd) < 8
+        or not re.search(r"[a-z]", pwd)
+        or not re.search(r"[A-Z]", pwd)
+        or not re.search(r"[0-9]", pwd)
+        or not re.search(r"[^A-Za-z0-9]", pwd)
+    ):
+        raise HTTPException(
+            status_code=400, detail="Password does not meet complexity requirements"
+        )
 
     user_id = confirm_and_consume_reset_token(body.token)
     if not user_id:

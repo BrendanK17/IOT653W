@@ -2,23 +2,39 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from dotenv import load_dotenv
 import os
+from typing import Any
 
 load_dotenv()
 
+# Environment flags
 MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
+TESTING = os.getenv("TESTING", "0").lower() in ("1", "true", "yes")
 
-if not MONGODB_CONNECTION_STRING:
-    raise ValueError("MONGODB_CONNECTION_STRING is not set")
+# Create a client. When testing, prefer an in-memory mongomock client to avoid network calls.
+# Use `Any` here so type checkers accept index access like `client[DB_NAME]` for both
+# the real `MongoClient` and `mongomock.MongoClient`.
+client: Any
 
-# Create a new client and connect to the server
-client: MongoClient = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
+if TESTING:
+    try:
+        import mongomock
 
-# Send a ping to confirm a successful connection
-try:
-    client.admin.command("ping")
-    print("Pinged your deployment. You successfully connected to MongoDB!")
-except Exception as e:
-    print(e)
+        client = mongomock.MongoClient()
+    except Exception as e:
+        raise ImportError(
+            "mongomock is required for testing. Install dev dependencies (e.g. `poetry install --with dev`)."
+        ) from e
+else:
+    if not MONGODB_CONNECTION_STRING:
+        raise ValueError("MONGODB_CONNECTION_STRING is not set")
+
+    # Create a real MongoDB client and verify connection
+    client = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
+    try:
+        client.admin.command("ping")
+        print("Pinged your deployment. You successfully connected to MongoDB!")
+    except Exception as e:
+        print(e)
 
 
 # --- Climatiq Response Collection ---

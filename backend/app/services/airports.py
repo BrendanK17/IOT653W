@@ -69,11 +69,13 @@ def log_prompt(prompt: str, country: Optional[str], response_text: str):
     try:
         db = get_db()
         col = db[AIRPORT_PROMPT_LOG_COLLECTION]
-        col.insert_one({
-            "prompt": prompt,
-            "country": country,
-            "response": response_text,
-            "created_at": datetime.utcnow(),
-        })
+        col.insert_one(
+            {
+                "prompt": prompt,
+                "country": country,
+                "response": response_text,
+                "created_at": datetime.utcnow(),
+            }
+        )
     except Exception:
         logging.exception("Failed to log airports prompt")

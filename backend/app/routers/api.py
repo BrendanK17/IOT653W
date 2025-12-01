@@ -93,15 +93,38 @@ def api_update_airports(country: str = "ALL"):
         for item in data:
             if not isinstance(item, dict):
                 continue
-            cleaned.append({
-                "iata": item.get("iata"),
-                "name": item.get("name"),
-                "city": item.get("city"),
-                "country": item.get("country"),
-                "lat": float(item.get("lat")) if item.get("lat") is not None else None,
-                "lon": float(item.get("lon")) if item.get("lon") is not None else None,
-                "aliases": item.get("aliases") or [],
-            })
+            # Safely parse latitude and longitude: store values first so mypy
+            # can narrow types, and convert inside try/except to handle
+            # non-numeric or unexpected types gracefully.
+            lat_val = item.get("lat")
+            lon_val = item.get("lon")
+
+            lat = None
+            lon = None
+
+            if lat_val is not None:
+                try:
+                    lat = float(lat_val)
+                except (TypeError, ValueError):
+                    lat = None
+
+            if lon_val is not None:
+                try:
+                    lon = float(lon_val)
+                except (TypeError, ValueError):
+                    lon = None
+
+            cleaned.append(
+                {
+                    "iata": item.get("iata"),
+                    "name": item.get("name"),
+                    "city": item.get("city"),
+                    "country": item.get("country"),
+                    "lat": lat,
+                    "lon": lon,
+                    "aliases": item.get("aliases") or [],
+                }
+            )
         # save for country or ALL
         if country.upper() == "ALL":
             replace_all_airports(cleaned)
@@ -110,7 +133,9 @@ def api_update_airports(country: str = "ALL"):
         return {"message": "Airports updated", "count": len(cleaned)}
     except json.JSONDecodeError:
         logging.exception("Failed to parse JSON from LLM response")
-        raise HTTPException(status_code=500, detail="Failed to parse JSON from LLM response")
+        raise HTTPException(
+            status_code=500, detail="Failed to parse JSON from LLM response"
+        )
     except Exception:
         logging.exception("Unexpected error updating airports")
         raise HTTPException(status_code=500, detail="Internal server error")

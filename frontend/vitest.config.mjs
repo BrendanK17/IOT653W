@@ -9,7 +9,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.js'],
     coverage: {
-      provider: 'istanbul',
+      // Use V8 coverage provider in CI — it's faster and avoids hanging
+      // issues that can occur with the Istanbul provider in some environments.
+      provider: 'v8',
     },
   },
 })
