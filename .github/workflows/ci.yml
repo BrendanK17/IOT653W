@@ -7,6 +7,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
     - name: Checkout code
@@ -31,7 +32,8 @@ jobs:
         # Use the test switch so the backend uses an in-memory MongoDB (mongomock)
         TESTING: "1"
       run: |
-        poetry run pytest -q
+        # Limit tests to 60 seconds so they can't run away and consume minutes
+        timeout 60s poetry run pytest --maxfail=1 -q
 
     - name: Lint
       working-directory: ./backend
@@ -43,6 +45,7 @@ jobs:
 
   frontend-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
     - name: Checkout code
@@ -61,7 +64,9 @@ jobs:
 
     - name: Run frontend tests
       working-directory: ./frontend
-      run: npm run test:ci
+      run: |
+        # Limit frontend test step to 60 seconds to avoid runaway tests
+        timeout 60s npm run test:ci
 
     - name: Type check frontend
       working-directory: ./frontend

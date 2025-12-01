@@ -2,6 +2,15 @@ from app.services.climatiq import get_emission_factors
 from fastapi import APIRouter, HTTPException, Query
 from app.services.ollama import ask_ollama
 import logging
+from fastapi import HTTPException
+from app.services.airports import (
+    get_all_airports,
+    replace_airports_for_country,
+    replace_all_airports,
+    log_prompt,
+)
+from app.services.airport_prompt import get_prompt
+import json
 
 router = APIRouter(tags=["Example"])
 
@@ -40,4 +49,93 @@ def query_climatiq(
         return {"result": result}
     except Exception:
         logging.exception("Unexpected error in query_climatiq")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/airports")
+def api_get_airports():
+    """Return all airports stored in MongoDB."""
+    try:
+        docs = get_all_airports()
+        return {"airports": docs}
+    except Exception:
+        logging.exception("Failed to get airports from DB")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/airports/update")
+def api_update_airports(country: str = "ALL"):
+    """Update airports for a given country (ISO code) or ALL using the stored Ollama prompt.
+
+    This endpoint calls Ollama with a fixed prompt to generate JSON and saves the result to MongoDB.
+    """
+    prompt = get_prompt()
+    messages = [{"role": "user", "content": prompt + f"\nCountry: {country}"}]
+    try:
+        response_text = ask_ollama("gpt-oss:120b", messages)
+    except Exception as e:
+        logging.exception("Ollama query failed")
+        raise HTTPException(status_code=500, detail="LLM request failed")
+
+    # log prompt and response for auditing
+    try:
+        log_prompt(prompt, country, response_text)
+    except Exception:
+        logging.exception("Failed to log prompt/response")
+
+    # parse JSON from response
+    try:
+        data = json.loads(response_text)
+        if not isinstance(data, list):
+            raise ValueError("Expected JSON array from LLM")
+        # minimal validation: ensure required keys exist
+        cleaned = []
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            # Safely parse latitude and longitude: store values first so mypy
+            # can narrow types, and convert inside try/except to handle
+            # non-numeric or unexpected types gracefully.
+            lat_val = item.get("lat")
+            lon_val = item.get("lon")
+
+            lat = None
+            lon = None
+
+            if lat_val is not None:
+                try:
+                    lat = float(lat_val)
+                except (TypeError, ValueError):
+                    lat = None
+
+            if lon_val is not None:
+                try:
+                    lon = float(lon_val)
+                except (TypeError, ValueError):
+                    lon = None
+
+            cleaned.append(
+                {
+                    "iata": item.get("iata"),
+                    "name": item.get("name"),
+                    "city": item.get("city"),
+                    "country": item.get("country"),
+                    "lat": lat,
+                    "lon": lon,
+                    "aliases": item.get("aliases") or [],
+                }
+            )
+        # save for country or ALL
+        if country.upper() == "ALL":
+            replace_all_airports(cleaned)
+        else:
+            replace_airports_for_country(country.upper(), cleaned)
+        return {"message": "Airports updated", "count": len(cleaned)}
+    except json.JSONDecodeError:
+        logging.exception("Failed to parse JSON from LLM response")
+        raise HTTPException(
+            status_code=500, detail="Failed to parse JSON from LLM response"
+        )
+    except Exception:
+        logging.exception("Unexpected error updating airports")
         raise HTTPException(status_code=500, detail="Internal server error")

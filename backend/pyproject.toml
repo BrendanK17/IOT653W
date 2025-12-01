@@ -13,7 +13,10 @@ dependencies = [
     "python-dotenv>=1.2.1,<2.0.0",
     "ollama>=0.6.0,<0.7.0",
     "requests (>=2.32.5,<3.0.0)",
-    "pymongo (>=4.15.4,<5.0.0)"
+    "pymongo (>=4.15.4,<5.0.0)",
+    "argon2-cffi (>=25.1.0,<26.0.0)",
+    "python-jose (>=3.5.0,<4.0.0)",
+    "email-validator (>=2.3.0,<3.0.0)"
 ]
 
 [tool.poetry.group.dev.dependencies]
@@ -22,6 +25,7 @@ mypy = "^1.5"
 pytest = "^8.0"
 types-requests = "^2.32.4"
 mongomock = "^4.1"
+types-python-jose = "^3.5.0.20250531"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

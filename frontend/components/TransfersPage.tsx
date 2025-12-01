@@ -5,7 +5,7 @@ import { FilterSidebar } from './transport/FilterSidebar';
 import { TransferList } from './transport/TransferList';
 import type { FilterState } from './transport/FilterSidebar';
 import { Button } from './ui/button';
-import { SearchBox, AirportDropdown } from './search/SearchComponents';
+import { SearchBox, AirportDropdown, AirportOption } from './search/SearchComponents';
 
 interface TransfersPageProps {
   isLoggedIn: boolean;
@@ -13,8 +13,8 @@ interface TransfersPageProps {
   selectedAirport: string;
   searchQuery: string;
   transportOptions: TransportOption[];
-  onAirportSelect: (airport: string) => void;
-  airports: string[];
+  onAirportSelect: (display: string, code: string) => void;
+  airports: AirportOption[];
 }
 
 const TransfersPage = ({
@@ -100,10 +100,10 @@ const TransfersPage = ({
                   searchQuery={searchValue}
                   showDropdown={showDropdown}
                   airports={airports}
-                  onSelect={(airport) => {
-                    setSearchValue(airport);
+                  onSelect={(display, code) => {
+                    setSearchValue(display);
                     setShowDropdown(false);
-                    onAirportSelect(airport);
+                    onAirportSelect(display, code);
                   }}
                 />
               </div>
