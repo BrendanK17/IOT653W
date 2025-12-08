@@ -10,6 +10,12 @@ from app.services.airports import (
     log_prompt,
 )
 from app.services.airport_prompt import get_prompt
+from app.services.airport_transports import (
+    get_transports_for_airport,
+    replace_transports_for_airport,
+    log_prompt as transport_log_prompt,
+)
+from app.services.airport_agent import run_airport_lookup
 import json
 
 router = APIRouter(tags=["Example"])
@@ -138,4 +144,67 @@ def api_update_airports(country: str = "ALL"):
         )
     except Exception:
         logging.exception("Unexpected error updating airports")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+
+@router.get("/airports/{iata}/transports")
+def api_get_transports(iata: str):
+    """Return transport options for a specific airport.
+
+    If transports are not present in the database, call the LLM prompt on-demand,
+    store the results, and return them.
+    """
+    try:
+        docs = get_transports_for_airport(iata)
+        if docs:
+            return {"transports": docs}
+
+        # Not in DB: run the new airport agent which will orchestrate the LLM + tools
+        try:
+            cleaned = run_airport_lookup(iata)
+        except Exception:
+            logging.exception("Airport agent failed for %s", iata)
+            raise HTTPException(status_code=500, detail="Agent request failed")
+
+        # Log and persist
+        try:
+            replace_transports_for_airport(iata.upper(), cleaned)
+        except Exception:
+            logging.exception("Failed to save transports for %s", iata)
+            raise HTTPException(status_code=500, detail="Failed to save transports")
+
+        return {"transports": cleaned}
+    except Exception:
+        logging.exception("Failed to get transports from DB")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/airports/{iata}/transports/update")
+def api_update_transports(iata: str):
+    """Force update transports for a specific airport by calling the LLM and saving results."""
+    logging.info("=== UPDATE TRANSPORTS ENDPOINT CALLED ===")
+    logging.info("Airport IATA: %s", iata)
+    
+    try:
+        logging.info("Calling run_airport_lookup for %s...", iata)
+        cleaned = run_airport_lookup(iata)
+        logging.info("run_airport_lookup completed. Returned %d transport options", len(cleaned))
+        for idx, transport in enumerate(cleaned):
+            logging.info("Transport %d: %s (%s) with %d stops", 
+                        idx + 1, 
+                        transport.get("name"), 
+                        transport.get("mode"), 
+                        len(transport.get("stops", [])))
+    except Exception:
+        logging.exception("Airport agent failed for update %s", iata)
+        raise HTTPException(status_code=500, detail="Agent request failed")
+
+    try:
+        logging.info("Saving %d transports to MongoDB...", len(cleaned))
+        replace_transports_for_airport(iata.upper(), cleaned)
+        logging.info("Successfully saved transports for %s", iata)
+        return {"message": "Transports updated", "count": len(cleaned)}
+    except Exception:
+        logging.exception("Unexpected error updating transports for %s", iata)
         raise HTTPException(status_code=500, detail="Internal server error")

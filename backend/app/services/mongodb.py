@@ -3,6 +3,8 @@ from pymongo.server_api import ServerApi
 from dotenv import load_dotenv
 import os
 from typing import Any
+import logging
+import certifi
 
 load_dotenv()
 
@@ -29,12 +31,22 @@ else:
         raise ValueError("MONGODB_CONNECTION_STRING is not set")
 
     # Create a real MongoDB client and verify connection
-    client = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
+    # Use the system CA bundle from certifi to avoid TLS handshake issues
     try:
+        client = MongoClient(
+            MONGODB_CONNECTION_STRING,
+            server_api=ServerApi("1"),
+            tls=True,
+            tlsCAFile=certifi.where(),
+            serverSelectionTimeoutMS=30000,
+        )
         client.admin.command("ping")
-        print("Pinged your deployment. You successfully connected to MongoDB!")
+        logging.info("Pinged your deployment. You successfully connected to MongoDB!")
     except Exception as e:
-        print(e)
+        # Log full exception for debugging TLS / connectivity issues
+        logging.exception("Failed to connect to MongoDB: %s", e)
+        # Re-raise so calling code can decide how to proceed
+        raise
 
 
 # --- Climatiq Response Collection ---
