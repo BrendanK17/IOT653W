@@ -11,7 +11,7 @@ load_dotenv()
 
 from app.services.ollama import ask_ollama
 from app.services.transport_prompt import get_prompt as get_transport_prompt
-from app.services.tavily import search as tavily_search, extract_snippets
+from app.services.airports import get_all_airports
 
 
 def _is_tool_call(obj: Any) -> bool:
@@ -51,10 +51,16 @@ def _sanitize_json(text: str) -> Optional[Any]:
     """
     if not isinstance(text, str):
         return None
-    
+
+    # Remove model control tokens like <|start|>assistant|> that some LLMs emit
+    try:
+        text = re.sub(r"<\|[^\|]+\|>", " ", text)
+    except Exception:
+        pass
+
     # Remove trailing commas before } or ]
     text = re.sub(r',\s*([}\]])', r'\1', text)
-    
+
     try:
         return json.loads(text)
     except Exception:
@@ -71,6 +77,11 @@ def _extract_first_json(text: str) -> Optional[Any]:
     """
     if not isinstance(text, str):
         return None
+    # Remove model control tokens that may appear in Ollama responses
+    try:
+        text = re.sub(r"<\|[^\|]+\|>", " ", text)
+    except Exception:
+        pass
     text = text.strip()
     # Fast path: whole text is JSON (with sanitization)
     try:
@@ -132,7 +143,7 @@ def _extract_first_json(text: str) -> Optional[Any]:
     return None
 
 
-def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 8) -> List[Dict[str, Any]]:
+def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 20) -> List[Dict[str, Any]]:
     """Run the agent loop for an airport and return final transport list.
 
     The agent operates in a loop where the LLM can emit ONE of TWO JSON responses:
@@ -151,10 +162,9 @@ def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 
 
     # Add a strict JSON-only system instruction that explains the two response types.
     strict_system = (
-        "You MUST output ONLY valid JSON. Every response must be exactly one of these two JSON structures:\n"
-        "1. A search request: {\"action\": \"search\", \"queries\": [{\"id\": \"q1\", \"query\": \"...\", \"purpose\": \"...\"}], \"max_searches\": N}\n"
-        "2. A final answer: [{\"iata\": \"...\", \"id\": \"...\", \"airport\": \"...\", \"name\": \"...\", \"mode\": \"...\", \"co2\": null, \"stops\": [...]}]\n"
-        "Do NOT include any text, prose, markdown, or explanations. Only JSON."
+        "You MUST output ONLY valid JSON. Every response must be a top-level JSON array containing transport objects.\n"
+        "Do NOT emit any tool calls, search requests, or ask for external searches. The system will NOT execute external tools.\n"
+        "Return the final JSON array directly using the schema provided in the prompt. Do NOT include any text, prose, markdown, or explanations. Only JSON."
     )
 
     messages: List[Dict[str, str]] = [
@@ -163,35 +173,86 @@ def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 
         {"role": "user", "content": f"Airport: {iata.upper()}"},
     ]
 
-    # Provide a concrete tool-call example to encourage the LLM to search FIRST.
-    # DO NOT provide a final answer example yet - we want it to search first.
-    try:
-        example_tool_call = {
-            "action": "search",
-            "queries": [
-                {
-                    "id": "q1",
-                    "query": f"{iata} airport all train rail underground bus coach routes to city center complete station lists",
-                    "purpose": "identify all transport modes and operators"
-                },
-                {
-                    "id": "q2",
-                    "query": f"{iata} airport rail underground complete route station list all stops coordinates",
-                    "purpose": "get complete station lists with coordinates for rail/underground routes"
-                },
-                {
-                    "id": "q3",
-                    "query": f"{iata} airport transport fares current prices official",
-                    "purpose": "get current official pricing for all transport modes"
-                }
-            ],
-            "max_searches": 6,
-        }
-        messages.append({"role": "assistant", "content": json.dumps(example_tool_call)})
-    except Exception:
-        # If for some reason json.dumps fails, don't block the loop.
-        pass
+    def _summarize_result(res: Any, top_n: int = 3) -> List[Dict[str, Any]]:
+        """Return a compact summary list of top results from a tavily response.
+
+        Each summary item contains: title, url, score, snippet (short preview).
+        """
+        out: List[Dict[str, Any]] = []
+        try:
+            if not isinstance(res, dict):
+                return out
+            hits = []
+            for key in ("results", "items", "documents", "hits"):
+                if key in res and isinstance(res[key], list):
+                    hits = res[key]
+                    break
+            if not hits and isinstance(res, list):
+                hits = res
+            for item in hits[:top_n]:
+                try:
+                    title = item.get("title") or item.get("headline") or item.get("name") or ""
+                    url = item.get("url") or item.get("link") or ""
+                    score = item.get("score") if item.get("score") is not None else None
+                    content = item.get("content") or item.get("snippet") or item.get("raw_content") or ""
+                    snippet = (content[:300] + "...") if isinstance(content, str) and len(content) > 300 else content
+                    out.append({"title": title, "url": url, "score": score, "snippet": snippet})
+                except Exception:
+                    continue
+        except Exception:
+            return out
+        return out
+
+    def _normalize_query(iata_code: str, raw_query: str) -> str:
+        """Normalize queries to put city first and request a full list of stops.
+
+        - If airport info is available in DB, prepend the city name.
+        - Ensure the phrasing requests a full list of stops with coordinates and official fares.
+        """
+        q = (raw_query or "").strip()
+        try:
+            # Try to look up airport city from DB for nicer queries
+            city = None
+            try:
+                docs = get_all_airports()
+                for d in docs:
+                    if isinstance(d, dict) and d.get("iata") and d.get("iata").upper() == iata_code.upper():
+                        city = d.get("city") or d.get("name")
+                        break
+            except Exception:
+                city = None
+
+            if city:
+                # If city not already at start, prepend it
+                if not q.lower().startswith(city.lower()):
+                    q = f"{city} {q}"
+
+            # If query doesn't already ask for a full stop list, append guidance
+            low = q.lower()
+            if not ("full list" in low or "all stops" in low or "complete station" in low or "full stops" in low):
+                q = q + " full list of stops with coordinates and official fares"
+        except Exception:
+            # Fallback: ensure basic guidance
+            if not q:
+                q = f"{iata_code} airport full list of stops with coordinates and official fares"
+            elif "full list" not in q.lower():
+                q = q + " full list of stops with coordinates and official fares"
+        return q
+
+    # NOTE: External tool calls (Tavily) are intentionally disabled for the
+    # main agent flow. The model must produce the final JSON array directly
+    # using its knowledge and the prompt. No proactive searches will be run.
     
+    # Inform the LLM that external search summaries have been provided and
+    # must be used when producing the final JSON.
+    messages.append({
+        "role": "system",
+        "content": (
+            "You have been given external search summaries and results in the conversation under the keys `search_summary` and `search_results`. "
+            "NOTE: external search tools are disabled in this run; ignore any instructions to call external tools. Do NOT invent additional stops or pricing beyond what is reasonable. If information is missing, set fields to null."
+        )
+    })
+
     # Add an explicit user instruction to search first
     messages.append({
         "role": "user",
@@ -208,6 +269,11 @@ def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 
 
     for iteration in range(1, max_iters + 1):
         logging.info("Agent iteration %d for %s", iteration, iata)
+        # Log the messages we're about to send to the LLM (truncated to avoid huge logs)
+        try:
+            logging.debug("Messages sent to LLM (truncated 4000 chars): %s", json.dumps(messages, indent=2)[:4000])
+        except Exception:
+            logging.debug("Messages preview unavailable (non-serializable content)")
         try:
             response_text = ask_ollama(model, messages)
         except Exception:
@@ -223,6 +289,29 @@ def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 
             parsed = json.loads(response_text)
         except Exception:
             parsed = _extract_first_json(response_text)
+
+        # Some LLMs wrap a tool call under a top-level `tool_call` key. Unwrap it.
+        try:
+            if isinstance(parsed, dict) and parsed.get("tool_call") and isinstance(parsed.get("tool_call"), dict):
+                logging.info("Unwrapping top-level 'tool_call' wrapper from LLM response")
+                # preserve any top-level search_results for debugging by attaching to messages
+                wrapper = parsed
+                parsed = wrapper.get("tool_call")
+                # also log if wrapper contained search_results/other keys
+                other_keys = {k: v for k, v in wrapper.items() if k != "tool_call"}
+                if other_keys:
+                    try:
+                        logging.debug("Tool wrapper contained extra keys: %s", json.dumps(other_keys)[:2000])
+                    except Exception:
+                        logging.debug("Tool wrapper contained extra keys (non-serializable)")
+        except Exception:
+            pass
+
+        # Log parsed JSON (if any) for debugging
+        try:
+            logging.debug("LLM parsed JSON (pretty): %s", json.dumps(parsed, indent=2)[:4000])
+        except Exception:
+            logging.debug("Parsed JSON preview unavailable or not serializable")
 
         if parsed is None:
             logging.warning("LLM did not return parseable JSON on iteration %d. Full raw response:\n%s", iteration, response_text)
@@ -263,132 +352,14 @@ def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 
                 logging.info("Transport %d: %s (%s) with %d stops", idx + 1, transport.get("name"), transport.get("mode"), stops_count)
             return parsed
 
-        # If it's a tool call, execute and feed back results
+        # If the model emits a tool call, we do not execute external tools in
+        # the main flow. Tell the model tools are disabled and ask it to
+        # return the final JSON array directly.
         if _is_tool_call(parsed):
-            logging.info("Detected tool call on iteration %d. Parsed object: %s", iteration, json.dumps(parsed, indent=2))
-            tool_name = parsed.get("tool") or parsed.get("action")
-            logging.info("Tool name: %s", tool_name)
-
-            # Handle batch queries shape e.g. {"action":"search","queries":[{id,query,...},...]}
-            queries = parsed.get("queries") if isinstance(parsed.get("queries"), list) else None
-            if queries:
-                logging.info("Found %d queries to execute", len(queries))
-                feedback: Dict[str, Any] = {"tool_call": parsed, "search_results": {}}
-                for q in queries:
-                    if not isinstance(q, dict):
-                        continue
-                    qid = q.get("id") or q.get("qid") or q.get("name") or "q"
-                    qtext = q.get("query") or q.get("q") or q.get("text")
-                    qlimit = int(q.get("limit", 5) or 5)
-                    if not qtext:
-                        feedback["search_results"][qid] = {"error": "missing_query"}
-                        continue
-                    logging.info("=== EXECUTING TAVILY SEARCH ===")
-                    logging.info("Query ID: %s", qid)
-                    logging.info("Query Text: %s", qtext)
-                    logging.info("Limit: %d", qlimit)
-                    try:
-                        tavily_result = tavily_search(qtext, limit=qlimit)
-                        logging.info("Tavily search completed for qid=%s. Result type: %s, keys: %s", qid, type(tavily_result), list(tavily_result.keys()) if isinstance(tavily_result, dict) else "N/A")
-                        # If the client returned the fallback (no config), mark it
-                        if isinstance(tavily_result, dict) and tavily_result.get("fallback"):
-                            logging.info("Tavily fallback used for qid=%s", qid)
-                            feedback["search_results"][qid] = {"fallback": True, "raw": tavily_result}
-                        # tavily_result may be an error payload
-                        elif isinstance(tavily_result, dict) and tavily_result.get("error"):
-                            logging.error("Tavily returned error for qid=%s: %s", qid, tavily_result.get("message"))
-                            feedback["search_results"][qid] = {"error": tavily_result}
-                        else:
-                            snippets = extract_snippets(tavily_result)
-                            feedback["search_results"][qid] = {"raw": tavily_result, "snippets": snippets}
-                    except Exception:
-                        logging.exception("Tavily search failed for query id=%s", qid)
-                        feedback["search_results"][qid] = {"error": "tavily_error"}
-
-                # Attach original parsed call and full results so LLM can synthesise
-                # include the original query payload to help LLM debug
-                logging.info("Sending search results feedback to LLM. Feedback keys: %s", list(feedback.keys()))
-                logging.info("Search results summary: %s", {qid: "error" if res.get("error") else "success" for qid, res in feedback.get("search_results", {}).items()})
-                try:
-                    feedback_json = json.dumps(feedback)
-                    logging.info("Feedback JSON length: %d chars", len(feedback_json))
-                    messages.append({"role": "assistant", "content": feedback_json})
-                except Exception:
-                    logging.exception("Failed to append feedback json to messages")
-                    messages.append({"role": "assistant", "content": str(feedback)})
-                # If all queries either errored or returned a fallback, ask the LLM to produce a final answer anyway
-                all_errors_or_fallback = True
-                error_reports = []
-                for qid, res in feedback.get("search_results", {}).items():
-                    # If any result is a usable result (not error and not fallback), we are not in all-error state
-                    if not (isinstance(res, dict) and (res.get("error") or res.get("fallback"))):
-                        all_errors_or_fallback = False
-                        break
-                    # collect messages for debugging
-                    if isinstance(res, dict) and res.get("fallback"):
-                        msg = "fallback"
-                    else:
-                        err = res.get("error")
-                        if isinstance(err, dict):
-                            msg = err.get("message") or err.get("response_text") or str(err)
-                        else:
-                            msg = str(err)
-                    error_reports.append({"id": qid, "message": msg})
-
-                if all_errors_or_fallback:
-                    logging.warning("All Tavily queries failed or fell back for %s: %s", iata, error_reports)
-                    messages.append({
-                        "role": "user",
-                        "content": (
-                            "All external searches failed or returned fallbacks: "
-                            + json.dumps(error_reports)
-                            + ". Please provide a final JSON array of transport options based on your knowledge and the prompt."
-                        ),
-                    })
-                continue
-
-            # Single query shapes
-            if tool_name and "tavily" in str(tool_name).lower() or parsed.get("query") or parsed.get("q"):
-                query = parsed.get("query") or parsed.get("q") or parsed.get("args", {}).get("query")
-                limit = int(parsed.get("limit", parsed.get("args", {}).get("limit", 5) or 5))
-                if not query:
-                    messages.append({"role": "assistant", "content": json.dumps({"error": "missing_query"})})
-                    messages.append({"role": "user", "content": "Tool call missing `query` field."})
-                    continue
-
-                logging.info("Performing Tavily search for query: %s", query)
-                try:
-                    tavily_result = tavily_search(query, limit=limit)
-                    if isinstance(tavily_result, dict) and tavily_result.get("fallback"):
-                        logging.info("Tavily fallback used for single query")
-                        tool_feedback = {"tool_call": parsed, "search_results": {"fallback": True, "raw": tavily_result}}
-                    elif isinstance(tavily_result, dict) and tavily_result.get("error"):
-                        logging.error("Tavily returned error for single query: %s", tavily_result.get("message"))
-                        tool_feedback = {"tool_call": parsed, "search_results": {"error": tavily_result}}
-                    else:
-                        snippets = extract_snippets(tavily_result)
-                        tool_feedback = {"tool_call": parsed, "search_results": {"raw": tavily_result, "snippets": snippets}}
-                except Exception:
-                    logging.exception("Tavily search failed for query: %s", query)
-                    tool_feedback = {"tool_call": parsed, "search_results": {"error": "tavily_error"}}
-
-                try:
-                    messages.append({"role": "assistant", "content": json.dumps(tool_feedback)})
-                except Exception:
-                    logging.exception("Failed to append tool feedback JSON to messages")
-                    messages.append({"role": "assistant", "content": str(tool_feedback)})
-                # If the single tool call returned an error or a fallback, prompt LLM to produce best-effort final array
-                sr = tool_feedback.get("search_results")
-                if isinstance(sr, dict) and (sr.get("error") or sr.get("fallback")):
-                    logging.warning("Single Tavily call returned error/fallback for %s: %s", iata, sr.get("error") or sr.get("fallback"))
-                    messages.append({
-                        "role": "user",
-                        "content": (
-                            "The external search tool failed or was unavailable: " + json.dumps(sr.get("error") or {"fallback": True})
-                            + ". Please provide a final JSON array of transport options based on your knowledge and the prompt."
-                        ),
-                    })
-                continue
+            logging.info("Model requested a tool call on iteration %d, but external tools are disabled. Parsed: %s", iteration, json.dumps(parsed, indent=2))
+            messages.append({"role": "assistant", "content": json.dumps({"error": "tool_calls_disabled", "received": parsed})})
+            messages.append({"role": "user", "content": "External search tools are disabled. Please return the FINAL JSON array of transports using only the prompt and your knowledge."})
+            continue
 
         # Unknown JSON shape: ask LLM to clarify / produce either tool call or final array
         logging.warning("LLM returned unknown JSON shape on iteration %d: %s", iteration, type(parsed))

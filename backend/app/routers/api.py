@@ -17,6 +17,11 @@ from app.services.airport_transports import (
 )
 from app.services.airport_agent import run_airport_lookup
 import json
+from app.services.tavily import search as tavily_search, extract_snippets, TAVILY_ENABLED
+try:
+    from app.services.tavily import _HAS_TAVILY_SDK  # type: ignore
+except Exception:
+    _HAS_TAVILY_SDK = False
 
 router = APIRouter(tags=["Example"])
 
@@ -191,10 +196,10 @@ def api_update_transports(iata: str):
         cleaned = run_airport_lookup(iata)
         logging.info("run_airport_lookup completed. Returned %d transport options", len(cleaned))
         for idx, transport in enumerate(cleaned):
-            logging.info("Transport %d: %s (%s) with %d stops", 
-                        idx + 1, 
-                        transport.get("name"), 
-                        transport.get("mode"), 
+            logging.info("Transport %d: %s (%s) with %d stops",
+                        idx + 1,
+                        transport.get("name"),
+                        transport.get("mode"),
                         len(transport.get("stops", [])))
     except Exception:
         logging.exception("Airport agent failed for update %s", iata)
@@ -208,3 +213,30 @@ def api_update_transports(iata: str):
     except Exception:
         logging.exception("Unexpected error updating transports for %s", iata)
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/tavily/status")
+def tavily_status():
+    """Return basic Tavily SDK configuration status."""
+    try:
+        return {
+            "tavily_enabled": bool(TAVILY_ENABLED),
+            "sdk_present": bool(_HAS_TAVILY_SDK),
+            "api_key_present": bool(os.getenv("TAVILY_API_KEY")),
+        }
+    except Exception:
+        logging.exception("Failed to read Tavily status")
+        raise HTTPException(status_code=500, detail="Failed to read Tavily status")
+
+
+@router.get("/tavily/test")
+def tavily_test(query: str = Query("Heathrow Express LHR Paddington", description="Query to test Tavily"), limit: int = 3):
+    """Simple health/check endpoint to test Tavily SDK calls directly."""
+    try:
+        logging.info("Tavily test endpoint called. Query: %s Limit: %d", query, limit)
+        resp = tavily_search(query, limit=limit)
+        snippets = extract_snippets(resp)
+        return {"ok": True, "resp_preview": (resp if isinstance(resp, dict) else str(resp)), "snippets_count": len(snippets)}
+    except Exception as e:
+        logging.exception("Tavily test failed")
+        raise HTTPException(status_code=500, detail=str(e))

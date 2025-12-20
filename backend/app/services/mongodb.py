@@ -3,8 +3,6 @@ from pymongo.server_api import ServerApi
 from dotenv import load_dotenv
 import os
 from typing import Any
-import logging
-import certifi
 
 load_dotenv()
 
@@ -15,13 +13,11 @@ TESTING = os.getenv("TESTING", "0").lower() in ("1", "true", "yes")
 # Create a client. When testing, prefer an in-memory mongomock client to avoid network calls.
 # Use `Any` here so type checkers accept index access like `client[DB_NAME]` for both
 # the real `MongoClient` and `mongomock.MongoClient`.
-client: Any
-
+client = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
 if TESTING:
     try:
-        import mongomock
-
-        client = mongomock.MongoClient()
+        client.admin.command("ping")
+        print("Pinged your deployment. You successfully connected to MongoDB!")
     except Exception as e:
         raise ImportError(
             "mongomock is required for testing. Install dev dependencies (e.g. `poetry install --with dev`)."
@@ -31,22 +27,12 @@ else:
         raise ValueError("MONGODB_CONNECTION_STRING is not set")
 
     # Create a real MongoDB client and verify connection
-    # Use the system CA bundle from certifi to avoid TLS handshake issues
+    client = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
     try:
-        client = MongoClient(
-            MONGODB_CONNECTION_STRING,
-            server_api=ServerApi("1"),
-            tls=True,
-            tlsCAFile=certifi.where(),
-            serverSelectionTimeoutMS=30000,
-        )
         client.admin.command("ping")
-        logging.info("Pinged your deployment. You successfully connected to MongoDB!")
+        print("Pinged your deployment. You successfully connected to MongoDB!")
     except Exception as e:
-        # Log full exception for debugging TLS / connectivity issues
-        logging.exception("Failed to connect to MongoDB: %s", e)
-        # Re-raise so calling code can decide how to proceed
-        raise
+        print(e)
 
 
 # --- Climatiq Response Collection ---
