@@ -6,7 +6,6 @@ import { NewInsightsPage } from './components/InsightsPage';
 import { TransfersPage } from './components/TransfersPage';
 import { TerminalTransfersPage } from './components/TerminalTransfersPage';
 import { AccountPage } from './components/AccountPage';
-import { airports, transportOptions as rawTransportOptions } from './utils/mockData';
 import { ViewType, TransportOption } from './types';
 import { useToast } from './components/ui/Toast';
 import { refreshAccessToken, parseJwt, default as API_BASE } from './utils/api';
@@ -22,28 +21,81 @@ const extractAirportCode = (airportString: string): string => {
   return match?.[1] || '';
 };
 
-// Convert transport options from mockData format to component format
+// Convert transport options from backend API format to component format
 const convertTransportOptions = (options: any[], airportCode: string): TransportOption[] => {
-  return options.map((option, index) => ({
-    id: `${airportCode}-${index + 1}`,
-    mode: option.mode,
-    name: option.route,
-    airport: airportCode,
-    duration: `${option.duration} mins`,
-    price: option.price,
-    stops: option.stops === 0 ? 'Direct' : `${option.stops} stops`,
-    isEco: option.isEcoFriendly || false,
-    isFastest: option.isFastest || false,
-    isCheapest: option.isCheapest || false,
-    isBest: option.isBestOverall || false,
-    route: option.route,
-    co2: option.co2 || 0,
-  }));
+  // helper to map backend modes to our frontend modes
+  const mapMode = (m: string) => {
+    if (!m) return 'train';
+    const mm = m.toLowerCase();
+    if (mm === 'rail' || mm === 'train') return 'train';
+    if (mm === 'coach' || mm === 'bus') return 'bus';
+    if (mm === 'underground' || mm === 'subway' || mm === 'tube') return 'subway';
+    if (mm === 'taxi' || mm === 'cab' || mm === 'ride_hailing') return 'taxi';
+    return 'train';
+  };
+
+  return options.map((option, index) => {
+    // Support backend shape: option.stops is an array of stops with prices
+    const backendStops = Array.isArray(option.stops) ? option.stops : undefined;
+
+    // compute price: pick minimum positive price from stops/prices, or fallback to option.price
+    let price = 0;
+    if (backendStops && backendStops.length) {
+      const amounts: number[] = [];
+      for (const s of backendStops) {
+        if (Array.isArray(s.prices)) {
+          for (const p of s.prices) {
+            const a = Number(p?.amount);
+            if (!Number.isNaN(a) && a > 0) amounts.push(a);
+          }
+        }
+      }
+      if (amounts.length) price = Math.min(...amounts);
+    }
+    if (!price && typeof option.price === 'number' && option.price > 0) price = option.price;
+
+    // duration: backend doesn't provide duration; estimate from stops or fallback
+    const durationMinutes = backendStops ? Math.max(10, Math.round(backendStops.length * 2)) : (typeof option.duration === 'number' ? option.duration : parseInt(option.duration || '0'));
+    const duration = `${durationMinutes} mins`;
+
+    // stops string
+    const stopsStr = backendStops ? (backendStops.length <= 1 ? 'Direct' : `${backendStops.length} stops`) : (typeof option.stops === 'string' ? option.stops : (option.stops === 0 ? 'Direct' : `${option.stops} stops`));
+
+    // route: prefer option.route or combine name + last stop
+    let route = option.route || option.name || '';
+    if (!route && backendStops && backendStops.length) {
+      const last = backendStops[backendStops.length - 1];
+      route = `${option.name || ''} → ${last?.stop_name || ''}`.trim();
+    }
+
+    // co2: backend may have null
+    const co2 = (option.co2 === null || option.co2 === undefined) ? 0 : Number(option.co2) || 0;
+
+    // simple heuristics for flags
+    const mode = mapMode(option.mode || option.type || 'train');
+    const isEco = mode !== 'taxi';
+
+    return {
+      id: `${airportCode}-${index + 1}`,
+      mode,
+      name: option.name || option.route || `${option.mode || 'Transport'}`,
+      airport: airportCode,
+      duration,
+      price,
+      stops: stopsStr,
+      isEco,
+      isFastest: false,
+      isCheapest: false,
+      isBest: false,
+      route: route || (option.route || ''),
+      co2,
+    } as TransportOption;
+  });
 };
 
 // Helper function to get airport name from code.
 // It prefers the loaded `airportOptions` (from backend) when provided,
-// falling back to the `airports` mockData lookup for compatibility.
+// falling back to the backend lookup for compatibility.
 const getAirportNameFromCode = (code: string, airportOptionsList?: AirportOption[]): string => {
   const upperCode = (code || '').toUpperCase();
 
@@ -81,10 +133,35 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
   const navigate = useNavigate();
   
   const airportName = getAirportNameFromCode(airportCode || '', airports);
-  const transportOptions = airportCode ? convertTransportOptions(
-    rawTransportOptions[(airportCode.toUpperCase()) as keyof typeof rawTransportOptions] || [],
-    airportCode.toUpperCase()
-  ) : [];
+  // transport options loaded from backend for the given airport code
+  const [transportOptionsState, setTransportOptionsState] = useState<TransportOption[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      if (!airportCode) {
+        setTransportOptionsState([]);
+        return;
+      }
+      const code = airportCode.toUpperCase();
+      try {
+        const res = await fetch(`${API_BASE}/airports/${code}/transports`);
+        if (!res.ok) {
+          if (mounted) setTransportOptionsState([]);
+          return;
+        }
+        const body = await res.json().catch(() => ({}));
+        const items = Array.isArray(body.transports) ? body.transports : [];
+        if (mounted) setTransportOptionsState(convertTransportOptions(items, code));
+      } catch (e) {
+        if (mounted) setTransportOptionsState([]);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, [airportCode]);
+
+  const transportOptions = transportOptionsState;
 
   // Redirect to home if invalid airport code
   if (!airportName && airportCode) {
