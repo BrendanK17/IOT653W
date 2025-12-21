@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-python-dotenv
-argon2-cffi
-python-jose[cryptography]
-pytest
-requests
