@@ -22,6 +22,12 @@ try:
     from app.services.tavily import _HAS_TAVILY_SDK  # type: ignore
 except Exception:
     _HAS_TAVILY_SDK = False
+from app.services.city_fares import (
+    get_fare_summary_for_city,
+    save_fare_summary_for_city,
+    generate_fare_summary_for_city,
+    log_fare_summary_prompt,
+)
 
 router = APIRouter(tags=["Example"])
 
@@ -212,6 +218,62 @@ def api_update_transports(iata: str):
         return {"message": "Transports updated", "count": len(cleaned)}
     except Exception:
         logging.exception("Unexpected error updating transports for %s", iata)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/cities/{city}/fares")
+def api_get_city_fares(city: str):
+    """Return the fare summary for a specific city.
+
+    If the fare summary is not present in the database, generate it on-demand,
+    store the results, and return them.
+    """
+    try:
+        summary = get_fare_summary_for_city(city)
+        if summary:
+            return {"city": city, "fare_summary": summary}
+
+        # Not in DB: generate using LLM
+        try:
+            summary = generate_fare_summary_for_city(city)
+        except Exception:
+            logging.exception("Fare summary generation failed for %s", city)
+            raise HTTPException(status_code=500, detail="Fare summary generation failed")
+
+        # Log and persist
+        try:
+            save_fare_summary_for_city(city, summary)
+        except Exception:
+            logging.exception("Failed to save fare summary for %s", city)
+            raise HTTPException(status_code=500, detail="Failed to save fare summary")
+
+        return {"city": city, "fare_summary": summary}
+    except Exception:
+        logging.exception("Failed to get fare summary for city %s", city)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/cities/{city}/fares/update")
+def api_update_city_fares(city: str):
+    """Force update the fare summary for a specific city by calling the LLM and saving results."""
+    logging.info("=== UPDATE CITY FARES ENDPOINT CALLED ===")
+    logging.info("City: %s", city)
+
+    try:
+        logging.info("Generating fare summary for %s...", city)
+        summary = generate_fare_summary_for_city(city)
+        logging.info("Fare summary generation completed for %s", city)
+    except Exception:
+        logging.exception("Fare summary generation failed for update %s", city)
+        raise HTTPException(status_code=500, detail="Fare summary generation failed")
+
+    try:
+        logging.info("Saving fare summary for %s...", city)
+        save_fare_summary_for_city(city, summary)
+        logging.info("Successfully saved fare summary for %s", city)
+        return {"message": "Fare summary updated", "city": city}
+    except Exception:
+        logging.exception("Unexpected error updating fare summary for %s", city)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
