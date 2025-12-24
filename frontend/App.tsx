@@ -126,6 +126,9 @@ const getAirportNameFromCode = (code: string, airportOptionsList?: AirportOption
       return `${city ? city + ' ' : ''}${name} (${codeToShow})`.trim();
     }
   }
+
+  // Fallback: return the code itself if not found
+  return upperCode;
 };
 
 // Wrapper component for TransfersPage that reads URL params

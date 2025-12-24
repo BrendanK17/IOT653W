@@ -2,12 +2,12 @@ from app.services.mongodb import client, DB_NAME
 from app.services.ollama import ask_ollama
 from app.services.city_fare_prompt import get_fare_summary_prompt
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 FARE_SUMMARY_COLLECTION = "city_fare_summaries"
 
 
-def get_fare_summary_for_city(city: str) -> Dict[str, Any]:
+def get_fare_summary_for_city(city: str) -> Optional[Dict[str, Any]]:
     """
     Retrieve the fare summary for a given city from MongoDB.
     Args:
@@ -32,9 +32,7 @@ def save_fare_summary_for_city(city: str, summary: Dict[str, Any]) -> None:
     collection = db[FARE_SUMMARY_COLLECTION]
     # Upsert: update if exists, insert if not
     collection.replace_one(
-        {"city": city.upper()},
-        {"city": city.upper(), "summary": summary},
-        upsert=True
+        {"city": city.upper()}, {"city": city.upper(), "summary": summary}, upsert=True
     )
 
 
@@ -52,10 +50,15 @@ def generate_fare_summary_for_city(city: str) -> Dict[str, Any]:
         response_text = ask_ollama("gpt-oss:120b", messages)
         # Parse the JSON response
         import json
+
         summary_dict = json.loads(response_text.strip())
         return summary_dict
     except json.JSONDecodeError as e:
-        logging.exception("Failed to parse JSON from LLM response for city %s: %s", city, response_text[:500])
+        logging.exception(
+            "Failed to parse JSON from LLM response for city %s: %s",
+            city,
+            response_text[:500],
+        )
         raise ValueError(f"Invalid JSON response from LLM: {str(e)}")
     except Exception as e:
         logging.exception("Failed to generate fare summary for city %s", city)
@@ -67,5 +70,13 @@ def log_fare_summary_prompt(prompt: str, city: str, response: Dict[str, Any]):
     Log the prompt and response for auditing purposes.
     This could be extended to save to a log collection if needed.
     """
-    logging.info("Fare summary prompt for city %s: %s", city, prompt[:200] + "..." if len(prompt) > 200 else prompt)
-    logging.info("Fare summary response for city %s: %s", city, str(response)[:200] + "..." if len(str(response)) > 200 else str(response))
+    logging.info(
+        "Fare summary prompt for city %s: %s",
+        city,
+        prompt[:200] + "..." if len(prompt) > 200 else prompt,
+    )
+    logging.info(
+        "Fare summary response for city %s: %s",
+        city,
+        str(response)[:200] + "..." if len(str(response)) > 200 else str(response),
+    )

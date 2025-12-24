@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { TransfersPage } from '../TransfersPage'
-import type { TransportOption, ViewType } from '../../types'
+import type { ViewType } from '../../types'
+import type { AirportOption } from '../search/SearchComponents'
 
 // Previous mock transport data removed — tests skipped until new schema/mocks provided
 
@@ -12,7 +13,10 @@ const mockProps = {
   searchQuery: 'London Heathrow (LHR)',
   transportOptions: [],
   onAirportSelect: vi.fn(),
-  airports: ['London Heathrow (LHR)', 'London Gatwick (LGW)'],
+  airports: [
+    { id: '1', display: 'London Heathrow (LHR)', value: 'LHR', type: 'airport' as const, iata: 'LHR', name: 'Heathrow', city: 'London' },
+    { id: '2', display: 'London Gatwick (LGW)', value: 'LGW', type: 'airport' as const, iata: 'LGW', name: 'Gatwick', city: 'London' }
+  ] as AirportOption[],
 }
 
 describe.skip('TransfersPage Sorting (skipped - mocks removed)', () => {

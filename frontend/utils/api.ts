@@ -4,6 +4,7 @@ export const parseJwt = (token: string | null) => {
   if (!token) return null;
   try {
     const base = token.split('.')[1];
+    if (!base) return null;
     const json = decodeURIComponent(
       Array.prototype.map
         .call(window.atob(base), (c: string) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
