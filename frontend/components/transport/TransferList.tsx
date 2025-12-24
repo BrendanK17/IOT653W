@@ -4,12 +4,32 @@ import { FilterState } from '../transport/FilterSidebar';
 import TransportCard from '../transport/TransportCard';
 import { MapOverlay } from '../transport/MapOverlay';
 
+interface FareSummary {
+  modes?: Record<string, {
+    summary: string;
+    payment?: {
+      allowed?: string[];
+      not_allowed?: string[];
+    };
+  }>;
+  airports?: {
+    terminals?: Record<string, {
+      services?: Array<{
+        name: string;
+        payment?: {
+          allowed?: string[];
+          not_allowed?: string[];
+        };
+      }>;
+    }>;
+  };
+}
+
 interface TransferListProps {
   transportOptions: TransportOption[];
   filters: FilterState;
   selectedAirport: string;
-  sortBy: string;
-  fareSummary?: unknown;
+  fareSummary?: FareSummary;
 }
 
 export function TransferList({

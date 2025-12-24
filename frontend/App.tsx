@@ -11,6 +11,48 @@ import { useToast } from './components/ui/Toast';
 import { refreshAccessToken, parseJwt, default as API_BASE } from './utils/api';
 import type { AirportOption } from './components/search/SearchComponents';
 
+// Backend API response types
+interface BackendTransportOption {
+  mode?: string;
+  type?: string;
+  name?: string;
+  route?: string;
+  price?: number | string;
+  duration?: number | string;
+  stops?: string | number | string[];
+  co2?: number | null;
+  [key: string]: unknown;
+}
+
+interface BackendAirport {
+  iata?: string;
+  name?: string;
+  city?: string;
+  aliases?: string[];
+  [key: string]: unknown;
+}
+
+interface FareSummary {
+  modes?: Record<string, {
+    summary: string;
+    payment?: {
+      allowed?: string[];
+      not_allowed?: string[];
+    };
+  }>;
+  airports?: {
+    terminals?: Record<string, {
+      services?: Array<{
+        name: string;
+        payment?: {
+          allowed?: string[];
+          not_allowed?: string[];
+        };
+      }>;
+    }>;
+  };
+}
+
 // Module-level guards to prevent duplicate startup effects (works with React StrictMode)
 let __refreshRan = false;
 let __airportsLoaded = false;
@@ -22,7 +64,7 @@ const extractAirportCode = (airportString: string): string => {
 };
 
 // Convert transport options from backend API format to component format
-const convertTransportOptions = (options: unknown[], airportCode: string): TransportOption[] => {
+const convertTransportOptions = (options: BackendTransportOption[], airportCode: string): TransportOption[] => {
   // helper to map backend modes to our frontend modes
   const mapMode = (m: string) => {
     if (!m) return 'train';
@@ -44,8 +86,8 @@ const convertTransportOptions = (options: unknown[], airportCode: string): Trans
     if (backendStops && backendStops.length) {
       const amounts: number[] = [];
       for (const s of backendStops) {
-        if (Array.isArray(s.prices)) {
-          for (const p of s.prices) {
+        if (Array.isArray((s as any).prices)) {
+          for (const p of (s as any).prices) {
             const a = Number(p?.amount);
             if (!Number.isNaN(a) && a > 0) amounts.push(a);
           }
@@ -66,7 +108,7 @@ const convertTransportOptions = (options: unknown[], airportCode: string): Trans
     let route = option.route || option.name || '';
     if (!route && backendStops && backendStops.length) {
       const last = backendStops[backendStops.length - 1];
-      route = `${option.name || ''} → ${last?.stop_name || ''}`.trim();
+      route = `${option.name || ''} → ${(last as any)?.stop_name || ''}`.trim();
     }
 
     // co2: backend may have null
@@ -139,7 +181,7 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
   const airportName = getAirportNameFromCode(airportCode || '', airports);
   // transport options loaded from backend for the given airport code
   const [transportOptionsState, setTransportOptionsState] = useState<TransportOption[]>([]);
-  const [fareSummary, setFareSummary] = useState<unknown>(null);
+  const [fareSummary, setFareSummary] = useState<FareSummary | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -230,7 +272,7 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
       transportOptions={transportOptions}
       onAirportSelect={onAirportSelect}
       airports={airports}
-      fareSummary={fareSummary}
+      fareSummary={fareSummary || undefined}
     />
   );
 };
@@ -497,7 +539,7 @@ function App() {
         const res = await fetch(`${API_BASE}/airports`);
         if (!res.ok) return;
         const body = await res.json();
-        const docs: unknown[] = body.airports || [];
+        const docs: BackendAirport[] = body.airports || [];
 
         // build airport option objects
         const options: AirportOption[] = docs.map((d, idx) => ({

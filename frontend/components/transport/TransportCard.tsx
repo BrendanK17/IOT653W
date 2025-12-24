@@ -5,10 +5,31 @@ import { Button } from "../ui/button";
 import { TransportOption, TransportMode } from '../../types';
 import { Train, Bus, Car, Clock, ExternalLink, Map, Leaf } from 'lucide-react';
 
+interface FareSummary {
+  modes?: Record<string, {
+    summary: string;
+    payment?: {
+      allowed?: string[];
+      not_allowed?: string[];
+    };
+  }>;
+  airports?: {
+    terminals?: Record<string, {
+      services?: Array<{
+        name: string;
+        payment?: {
+          allowed?: string[];
+          not_allowed?: string[];
+        };
+      }>;
+    }>;
+  };
+}
+
 interface TransportCardProps {
   transport: TransportOption;
   onShowMap: () => void;
-  fareSummary?: unknown;
+  fareSummary?: FareSummary;
 }
 
 const getTransportIcon = (mode: TransportMode) => {

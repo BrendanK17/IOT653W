@@ -64,7 +64,6 @@ function Calendar({
         IconLeft: ({ className, ...props }: { className?: string; [key: string]: unknown }) => (
           <ChevronLeft className={cn("size-4", className)} {...props} />
         ),
-        // @ts-expect-error: React Day Picker component props are not fully typed
         IconRight: ({ className, ...props }: { className?: string; [key: string]: unknown }) => (
           <ChevronRight className={cn("size-4", className)} {...props} />
         ),

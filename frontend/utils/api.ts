@@ -19,7 +19,7 @@ export const parseJwt = (token: string | null) => {
 export const refreshAccessToken = async (): Promise<string | null> => {
   // Deduplicate concurrent refresh requests by reusing the same in-flight promise
   if ((refreshAccessToken as unknown as { _inFlight?: Promise<string | null> })._inFlight) {
-    return (refreshAccessToken as unknown as { _inFlight?: Promise<string | null> })._inFlight;
+    return (refreshAccessToken as unknown as { _inFlight?: Promise<string | null> })._inFlight!;
   }
 
   const promise = (async () => {
@@ -46,7 +46,7 @@ export const refreshAccessToken = async (): Promise<string | null> => {
     return result;
   } finally {
     // clear in-flight so future refreshes are possible
-    (refreshAccessToken as unknown as { _inFlight?: Promise<string | null> })._inFlight = null;
+    (refreshAccessToken as unknown as { _inFlight?: Promise<string | null> | null })._inFlight = null;
   }
 };
 

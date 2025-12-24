@@ -9,6 +9,27 @@ import { SearchBox, AirportDropdown, AirportOption } from './search/SearchCompon
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { ChevronDown } from 'lucide-react';
 
+interface FareSummary {
+  modes?: Record<string, {
+    summary: string;
+    payment?: {
+      allowed?: string[];
+      not_allowed?: string[];
+    };
+  }>;
+  airports?: {
+    terminals?: Record<string, {
+      services?: Array<{
+        name: string;
+        payment?: {
+          allowed?: string[];
+          not_allowed?: string[];
+        };
+      }>;
+    }>;
+  };
+}
+
 interface TransfersPageProps {
   isLoggedIn: boolean;
   onNavigate: (view: ViewType) => void;
@@ -17,7 +38,7 @@ interface TransfersPageProps {
   transportOptions: TransportOption[];
   onAirportSelect: (display: string, code: string) => void;
   airports: AirportOption[];
-  fareSummary?: unknown;
+  fareSummary?: FareSummary;
 }
 
 const TransfersPage = ({
@@ -48,8 +69,6 @@ const TransfersPage = ({
     flexibleTicketsOnly: false,
     firstClassOnly: false
   });
-
-  const [sortBy] = useState<string>('price');
 
   const [activeTab, setActiveTab] = useState('best-overall');
 
@@ -181,7 +200,6 @@ const TransfersPage = ({
               transportOptions={sortedTransports[activeTab as keyof typeof sortedTransports]}
               filters={filters}
               selectedAirport={selectedAirport}
-              sortBy={sortBy}
               fareSummary={fareSummary}
             />
 
@@ -211,14 +229,14 @@ const TransfersPage = ({
                       {fareSummary.modes && Object.entries(fareSummary.modes).map(([mode, data]: [string, unknown]) => (
                         <div key={mode} className="mb-4 last:mb-0">
                           <h4 className="font-medium capitalize mb-2">{mode.replace('_', ' ')}</h4>
-                          <p className="text-sm text-gray-700 mb-2">{data.summary}</p>
-                          {data.payment && (
+                          <p className="text-sm text-gray-700 mb-2">{(data as any).summary}</p>
+                          {(data as any).payment && (
                             <div className="text-xs text-gray-600">
-                              {data.payment.not_allowed && data.payment.not_allowed.length > 0 && (
-                                <p>Not accepted: {data.payment.not_allowed.join(', ')}</p>
+                              {(data as any).payment.not_allowed && (data as any).payment.not_allowed.length > 0 && (
+                                <p>Not accepted: {(data as any).payment.not_allowed.join(', ')}</p>
                               )}
-                              {data.payment.allowed && data.payment.allowed.length > 0 && (
-                                <p>Accepted: {data.payment.allowed.join(', ')}</p>
+                              {(data as any).payment.allowed && (data as any).payment.allowed.length > 0 && (
+                                <p>Accepted: {(data as any).payment.allowed.join(', ')}</p>
                               )}
                             </div>
                           )}
@@ -227,16 +245,16 @@ const TransfersPage = ({
                       {fareSummary.airports && fareSummary.airports.terminals && Object.entries(fareSummary.airports.terminals).map(([iata, terminal]: [string, unknown]) => (
                         <div key={iata} className="mb-4 last:mb-0">
                           <h4 className="font-medium">{iata} Airport</h4>
-                          {terminal.services && terminal.services.map((service: unknown, idx: number) => (
+                          {(terminal as any).services && (terminal as any).services.map((service: unknown, idx: number) => (
                             <div key={idx} className="ml-4 mt-2">
-                              <p className="text-sm font-medium">{service.name}</p>
-                              {service.payment && (
+                              <p className="text-sm font-medium">{(service as any).name}</p>
+                              {(service as any).payment && (
                                 <div className="text-xs text-gray-600">
-                                  {service.payment.not_allowed && service.payment.not_allowed.length > 0 && (
-                                    <p>Not accepted: {service.payment.not_allowed.join(', ')}</p>
+                                  {(service as any).payment.not_allowed && (service as any).payment.not_allowed.length > 0 && (
+                                    <p>Not accepted: {(service as any).payment.not_allowed.join(', ')}</p>
                                   )}
-                                  {service.payment.allowed && service.payment.allowed.length > 0 && (
-                                    <p>Accepted: {service.payment.allowed.join(', ')}</p>
+                                  {(service as any).payment.allowed && (service as any).payment.allowed.length > 0 && (
+                                    <p>Accepted: {(service as any).payment.allowed.join(', ')}</p>
                                   )}
                                 </div>
                               )}
