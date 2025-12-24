@@ -17,7 +17,12 @@ from app.services.airport_transports import (
 )
 from app.services.airport_agent import run_airport_lookup
 import json
-from app.services.tavily import search as tavily_search, extract_snippets, TAVILY_ENABLED
+from app.services.tavily import (
+    search as tavily_search,
+    extract_snippets,
+    TAVILY_ENABLED,
+)
+
 try:
     from app.services.tavily import _HAS_TAVILY_SDK  # type: ignore
 except Exception:
@@ -158,7 +163,6 @@ def api_update_airports(country: str = "ALL"):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-
 @router.get("/airports/{iata}/transports")
 def api_get_transports(iata: str):
     """Return transport options for a specific airport.
@@ -196,17 +200,21 @@ def api_update_transports(iata: str):
     """Force update transports for a specific airport by calling the LLM and saving results."""
     logging.info("=== UPDATE TRANSPORTS ENDPOINT CALLED ===")
     logging.info("Airport IATA: %s", iata)
-    
+
     try:
         logging.info("Calling run_airport_lookup for %s...", iata)
         cleaned = run_airport_lookup(iata)
-        logging.info("run_airport_lookup completed. Returned %d transport options", len(cleaned))
+        logging.info(
+            "run_airport_lookup completed. Returned %d transport options", len(cleaned)
+        )
         for idx, transport in enumerate(cleaned):
-            logging.info("Transport %d: %s (%s) with %d stops",
-                        idx + 1,
-                        transport.get("name"),
-                        transport.get("mode"),
-                        len(transport.get("stops", [])))
+            logging.info(
+                "Transport %d: %s (%s) with %d stops",
+                idx + 1,
+                transport.get("name"),
+                transport.get("mode"),
+                len(transport.get("stops", [])),
+            )
     except Exception:
         logging.exception("Airport agent failed for update %s", iata)
         raise HTTPException(status_code=500, detail="Agent request failed")
@@ -238,7 +246,9 @@ def api_get_city_fares(city: str):
             summary = generate_fare_summary_for_city(city)
         except Exception:
             logging.exception("Fare summary generation failed for %s", city)
-            raise HTTPException(status_code=500, detail="Fare summary generation failed")
+            raise HTTPException(
+                status_code=500, detail="Fare summary generation failed"
+            )
 
         # Log and persist
         try:
@@ -292,13 +302,22 @@ def tavily_status():
 
 
 @router.get("/tavily/test")
-def tavily_test(query: str = Query("Heathrow Express LHR Paddington", description="Query to test Tavily"), limit: int = 3):
+def tavily_test(
+    query: str = Query(
+        "Heathrow Express LHR Paddington", description="Query to test Tavily"
+    ),
+    limit: int = 3,
+):
     """Simple health/check endpoint to test Tavily SDK calls directly."""
     try:
         logging.info("Tavily test endpoint called. Query: %s Limit: %d", query, limit)
         resp = tavily_search(query, limit=limit)
         snippets = extract_snippets(resp)
-        return {"ok": True, "resp_preview": (resp if isinstance(resp, dict) else str(resp)), "snippets_count": len(snippets)}
+        return {
+            "ok": True,
+            "resp_preview": (resp if isinstance(resp, dict) else str(resp)),
+            "snippets_count": len(snippets),
+        }
     except Exception as e:
         logging.exception("Tavily test failed")
         raise HTTPException(status_code=500, detail=str(e))

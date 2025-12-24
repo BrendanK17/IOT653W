@@ -1,6 +1,6 @@
 // Core types for the GroundScanner application
 
-export type TransportMode = 'train' | 'bus' | 'taxi' | 'subway';
+export type TransportMode = 'train' | 'bus' | 'coach' | 'taxi' | 'subway';
 
 export type TabType = 'best' | 'cheapest' | 'fastest' | 'eco';
 
@@ -26,6 +26,7 @@ export interface FilterState {
   transportModes: {
     train: boolean;
     bus: boolean;
+    coach: boolean;
     taxi: boolean;
     subway: boolean;
   };

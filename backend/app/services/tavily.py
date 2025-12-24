@@ -2,6 +2,7 @@ import os
 import logging
 from typing import Any, Dict, List, Optional
 import json
+import requests
 
 from dotenv import load_dotenv
 import concurrent.futures
@@ -9,7 +10,8 @@ import time
 
 load_dotenv()
 try:
-    from tavily import TavilyClient
+    from tavily import TavilyClient  # type: ignore
+
     _HAS_TAVILY_SDK = True
     logging.info("Tavily SDK imported successfully")
 except ImportError as e:
@@ -26,7 +28,11 @@ except Exception as e:
 # the developer to set `TAVILY_API_URL` in the environment or .env.
 TAVILY_API_KEY: Optional[str] = os.getenv("TAVILY_API_KEY")
 
-logging.info("Tavily configuration: SDK=%s, API_KEY=%s", _HAS_TAVILY_SDK, "present" if TAVILY_API_KEY else "missing")
+logging.info(
+    "Tavily configuration: SDK=%s, API_KEY=%s",
+    _HAS_TAVILY_SDK,
+    "present" if TAVILY_API_KEY else "missing",
+)
 
 # Enabled when we have an API key and the SDK is available
 TAVILY_ENABLED = bool(TAVILY_API_KEY and _HAS_TAVILY_SDK)
@@ -46,21 +52,27 @@ def search(query: str, limit: int = 5) -> Dict[str, Any]:
     logging.info("SDK Available: %s", _HAS_TAVILY_SDK)
     logging.info("API Key Present: %s", bool(TAVILY_API_KEY))
     logging.info("Tavily Enabled: %s", TAVILY_ENABLED)
-    
+
     # Basic validation: avoid making requests with empty or obviously-invalid queries
     if not isinstance(query, str) or not query.strip() or len(query.strip()) < 5:
-        logging.warning("Tavily search called with empty/invalid query; skipping request")
+        logging.warning(
+            "Tavily search called with empty/invalid query; skipping request"
+        )
         return {"error": "invalid_query", "message": "query empty or too short"}
 
     if not TAVILY_ENABLED:
         logging.warning("Tavily is NOT enabled. Returning fallback.")
         return {"fallback": True, "results": [], "message": "Tavily not configured"}
-    
+
     try:
         logging.info("Sending Tavily SDK request (SDK=%s)...", _HAS_TAVILY_SDK)
-        logging.debug("Tavily request payload: %s", json.dumps({"query": query, "limit": limit}))
+        logging.debug(
+            "Tavily request payload: %s", json.dumps({"query": query, "limit": limit})
+        )
         if _HAS_TAVILY_SDK:
-            logging.info("Using Tavily SDK to execute search (with enforced timeout)...")
+            logging.info(
+                "Using Tavily SDK to execute search (with enforced timeout)..."
+            )
             client = TavilyClient(TAVILY_API_KEY)
             # Run the SDK call in a separate thread so we can enforce a timeout
             sdk_timeout = int(os.getenv("TAVILY_SDK_TIMEOUT", "15"))
@@ -69,17 +81,24 @@ def search(query: str, limit: int = 5) -> Dict[str, Any]:
                 try:
                     resp = future.result(timeout=sdk_timeout)
                 except concurrent.futures.TimeoutError:
-                    logging.error("Tavily SDK call timed out after %d seconds", sdk_timeout)
+                    logging.error(
+                        "Tavily SDK call timed out after %d seconds", sdk_timeout
+                    )
                     try:
                         future.cancel()
                     except Exception:
                         pass
-                    return {"error": "request_timeout", "message": f"SDK call timed out after {sdk_timeout} seconds"}
+                    return {
+                        "error": "request_timeout",
+                        "message": f"SDK call timed out after {sdk_timeout} seconds",
+                    }
                 except Exception:
                     logging.exception("Exception during Tavily SDK call")
                     return {"error": "request_failed", "message": "SDK call exception"}
         else:
-            logging.warning("Tavily SDK not available or not configured; returning fallback.")
+            logging.warning(
+                "Tavily SDK not available or not configured; returning fallback."
+            )
             return {"fallback": True, "results": [], "message": "Tavily not configured"}
 
         logging.info("Tavily returned response type: %s", type(resp))
@@ -92,9 +111,15 @@ def search(query: str, limit: int = 5) -> Dict[str, Any]:
             resp_text = json.dumps(resp)
         except Exception:
             resp_text = repr(resp)
-        logging.debug("Tavily raw response (truncated 2000 chars): %s", resp_text[:2000])
+        logging.debug(
+            "Tavily raw response (truncated 2000 chars): %s", resp_text[:2000]
+        )
         # Try to respect the `limit` param when possible by slicing common shapes.
-        if isinstance(resp, dict) and "results" in resp and isinstance(resp["results"], list):
+        if (
+            isinstance(resp, dict)
+            and "results" in resp
+            and isinstance(resp["results"], list)
+        ):
             resp["results"] = resp["results"][:limit]
         elif isinstance(resp, list):
             resp = resp[:limit]
@@ -114,7 +139,11 @@ def search(query: str, limit: int = 5) -> Dict[str, Any]:
         }
         try:
             # include response text when available for debugging
-            if isinstance(exc, requests.exceptions.RequestException) and hasattr(exc, "response") and exc.response is not None:
+            if (
+                isinstance(exc, requests.exceptions.RequestException)
+                and hasattr(exc, "response")
+                and exc.response is not None
+            ):
                 result["status_code"] = exc.response.status_code
                 result["response_text"] = exc.response.text[:2000]
         except Exception:

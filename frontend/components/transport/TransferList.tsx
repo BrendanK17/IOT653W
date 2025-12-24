@@ -4,18 +4,39 @@ import { FilterState } from '../transport/FilterSidebar';
 import TransportCard from '../transport/TransportCard';
 import { MapOverlay } from '../transport/MapOverlay';
 
+interface FareSummary {
+  modes?: Record<string, {
+    summary: string;
+    payment?: {
+      allowed?: string[];
+      not_allowed?: string[];
+    };
+  }>;
+  airports?: {
+    terminals?: Record<string, {
+      services?: Array<{
+        name: string;
+        payment?: {
+          allowed?: string[];
+          not_allowed?: string[];
+        };
+      }>;
+    }>;
+  };
+}
+
 interface TransferListProps {
   transportOptions: TransportOption[];
   filters: FilterState;
   selectedAirport: string;
-  sortBy: string;
+  fareSummary?: FareSummary;
 }
 
 export function TransferList({
   transportOptions,
   filters,
   selectedAirport,
-  sortBy: _sortBy
+  fareSummary,
 }: TransferListProps) {
   const [selectedTransfer, setSelectedTransfer] = useState<TransportOption | null>(null);
   const airportCode = selectedAirport.match(/\(([^)]+)\)/)?.[1] || selectedAirport;
@@ -44,6 +65,7 @@ export function TransferList({
               key={transfer.id}
               transport={transfer}
               onShowMap={() => setSelectedTransfer(transfer)}
+              fareSummary={fareSummary}
             />
           ))}
       </div>

@@ -7,6 +7,7 @@ import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 import { TransfersPage } from '../TransfersPage';
 import { TransportOption } from '../../types';
+import type { AirportOption } from '../search/SearchComponents';
 
 const mockTransportOptions: TransportOption[] = [
   {
@@ -64,7 +65,10 @@ describe('TransfersPage', () => {
     onNavigate: vi.fn(),
     transportOptions: mockTransportOptions,
     onAirportSelect: vi.fn(),
-    airports: ['London Heathrow (LHR)', 'London Gatwick (LGW)'],
+    airports: [
+      { id: '1', display: 'London Heathrow (LHR)', value: 'LHR', type: 'airport' as const, iata: 'LHR', name: 'Heathrow', city: 'London' },
+      { id: '2', display: 'London Gatwick (LGW)', value: 'LGW', type: 'airport' as const, iata: 'LGW', name: 'Gatwick', city: 'London' }
+    ] as AirportOption[],
   };
 
   beforeEach(() => {

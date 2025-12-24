@@ -11,6 +11,48 @@ import { useToast } from './components/ui/Toast';
 import { refreshAccessToken, parseJwt, default as API_BASE } from './utils/api';
 import type { AirportOption } from './components/search/SearchComponents';
 
+// Backend API response types
+interface BackendTransportOption {
+  mode?: string;
+  type?: string;
+  name?: string;
+  route?: string;
+  price?: number | string;
+  duration?: number | string;
+  stops?: string | number | string[];
+  co2?: number | null;
+  [key: string]: unknown;
+}
+
+interface BackendAirport {
+  iata?: string;
+  name?: string;
+  city?: string;
+  aliases?: string[];
+  [key: string]: unknown;
+}
+
+interface FareSummary {
+  modes?: Record<string, {
+    summary: string;
+    payment?: {
+      allowed?: string[];
+      not_allowed?: string[];
+    };
+  }>;
+  airports?: {
+    terminals?: Record<string, {
+      services?: Array<{
+        name: string;
+        payment?: {
+          allowed?: string[];
+          not_allowed?: string[];
+        };
+      }>;
+    }>;
+  };
+}
+
 // Module-level guards to prevent duplicate startup effects (works with React StrictMode)
 let __refreshRan = false;
 let __airportsLoaded = false;
@@ -22,13 +64,14 @@ const extractAirportCode = (airportString: string): string => {
 };
 
 // Convert transport options from backend API format to component format
-const convertTransportOptions = (options: any[], airportCode: string): TransportOption[] => {
+const convertTransportOptions = (options: BackendTransportOption[], airportCode: string): TransportOption[] => {
   // helper to map backend modes to our frontend modes
   const mapMode = (m: string) => {
     if (!m) return 'train';
     const mm = m.toLowerCase();
     if (mm === 'rail' || mm === 'train') return 'train';
-    if (mm === 'coach' || mm === 'bus') return 'bus';
+    if (mm === 'bus') return 'bus';
+    if (mm === 'coach') return 'coach';
     if (mm === 'underground' || mm === 'subway' || mm === 'tube') return 'subway';
     if (mm === 'taxi' || mm === 'cab' || mm === 'ride_hailing') return 'taxi';
     return 'train';
@@ -43,8 +86,8 @@ const convertTransportOptions = (options: any[], airportCode: string): Transport
     if (backendStops && backendStops.length) {
       const amounts: number[] = [];
       for (const s of backendStops) {
-        if (Array.isArray(s.prices)) {
-          for (const p of s.prices) {
+        if (Array.isArray((s as any).prices)) { // eslint-disable-line @typescript-eslint/no-explicit-any
+          for (const p of (s as any).prices) { // eslint-disable-line @typescript-eslint/no-explicit-any
             const a = Number(p?.amount);
             if (!Number.isNaN(a) && a > 0) amounts.push(a);
           }
@@ -65,7 +108,7 @@ const convertTransportOptions = (options: any[], airportCode: string): Transport
     let route = option.route || option.name || '';
     if (!route && backendStops && backendStops.length) {
       const last = backendStops[backendStops.length - 1];
-      route = `${option.name || ''} → ${last?.stop_name || ''}`.trim();
+      route = `${option.name || ''} → ${(last as any)?.stop_name || ''}`.trim(); // eslint-disable-line @typescript-eslint/no-explicit-any
     }
 
     // co2: backend may have null
@@ -125,6 +168,9 @@ const getAirportNameFromCode = (code: string, airportOptionsList?: AirportOption
       return `${city ? city + ' ' : ''}${name} (${codeToShow})`.trim();
     }
   }
+
+  // Fallback: return the code itself if not found
+  return upperCode;
 };
 
 // Wrapper component for TransfersPage that reads URL params
@@ -135,12 +181,14 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
   const airportName = getAirportNameFromCode(airportCode || '', airports);
   // transport options loaded from backend for the given airport code
   const [transportOptionsState, setTransportOptionsState] = useState<TransportOption[]>([]);
+  const [fareSummary, setFareSummary] = useState<FareSummary | null>(null);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       if (!airportCode) {
         setTransportOptionsState([]);
+        setFareSummary(null);
         return;
       }
       const code = airportCode.toUpperCase();
@@ -156,10 +204,27 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
       } catch (e) {
         if (mounted) setTransportOptionsState([]);
       }
+
+      // Load fare summary
+      const selectedOption = airports.find(o => o.iata?.toUpperCase() === code || o.value?.toUpperCase() === code);
+      const city = selectedOption?.city?.toUpperCase();
+      if (city) {
+        try {
+          const res = await fetch(`${API_BASE}/cities/${city}/fares`);
+          if (res.ok) {
+            const data = await res.json();
+            if (mounted) setFareSummary(data.fare_summary);
+          }
+        } catch (e) {
+          // ignore
+        }
+      } else {
+        if (mounted) setFareSummary(null);
+      }
     };
     load();
     return () => { mounted = false; };
-  }, [airportCode]);
+  }, [airportCode, airports]);
 
   const transportOptions = transportOptionsState;
 
@@ -207,6 +272,7 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
       transportOptions={transportOptions}
       onAirportSelect={onAirportSelect}
       airports={airports}
+      fareSummary={fareSummary || undefined}
     />
   );
 };
@@ -387,7 +453,7 @@ function App() {
   // login using top-level alias
   const handleLoginApi = async (email: string, password: string) => {
     try {
-      const res = await fetch(`${(import.meta as any).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/login`, {
+      const res = await fetch(`${(import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include', // send/receive refresh cookie
@@ -414,7 +480,7 @@ function App() {
 
   const handleRegister = async (email: string, password: string) => {
     try {
-      const res = await fetch(`${(import.meta as any).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/register`, {
+      const res = await fetch(`${(import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -436,7 +502,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${(import.meta as any).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/auth/logout`, { method: 'POST', credentials: 'include' });
+      await fetch(`${(import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/auth/logout`, { method: 'POST', credentials: 'include' });
     } catch (e) {
       // ignore network errors during logout
       console.error('logout error', e);
@@ -473,7 +539,7 @@ function App() {
         const res = await fetch(`${API_BASE}/airports`);
         if (!res.ok) return;
         const body = await res.json();
-        const docs: any[] = body.airports || [];
+        const docs: BackendAirport[] = body.airports || [];
 
         // build airport option objects
         const options: AirportOption[] = docs.map((d, idx) => ({
@@ -582,7 +648,7 @@ function App() {
                   searchQuery={appState.searchQuery}
                   onSearchChange={(query) => setAppState(prev => ({ ...prev, searchQuery: query }))}
                   onSearch={() => {
-                    const code = (appState as any).selectedAirportCode || extractAirportCode(appState.selectedAirport || appState.searchQuery);
+                    const code = (appState as unknown as { selectedAirportCode?: string }).selectedAirportCode || extractAirportCode(appState.selectedAirport || appState.searchQuery);
                     if (code) {
                       navigate(`/${code.toLowerCase()}`);
                     }

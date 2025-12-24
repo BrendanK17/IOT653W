@@ -1,5 +1,4 @@
-PROMPT = (
-"""
+PROMPT = """
 CRITICAL: Output ONLY valid JSON. No text, no markdown, no code blocks, no explanations.
 
 TASK: Generate a JSON array of public transport routes from an airport to its city center.
@@ -109,7 +108,6 @@ RULES:
 6. For each transport option, list all major stops from airport to city center
 7. Never output non-JSON text
 """
-)
 
 
 def get_prompt():

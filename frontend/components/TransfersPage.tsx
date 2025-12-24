@@ -6,6 +6,29 @@ import { TransferList } from './transport/TransferList';
 import type { FilterState } from './transport/FilterSidebar';
 import { Button } from './ui/button';
 import { SearchBox, AirportDropdown, AirportOption } from './search/SearchComponents';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { ChevronDown } from 'lucide-react';
+
+interface FareSummary {
+  modes?: Record<string, {
+    summary: string;
+    payment?: {
+      allowed?: string[];
+      not_allowed?: string[];
+    };
+  }>;
+  airports?: {
+    terminals?: Record<string, {
+      services?: Array<{
+        name: string;
+        payment?: {
+          allowed?: string[];
+          not_allowed?: string[];
+        };
+      }>;
+    }>;
+  };
+}
 
 interface TransfersPageProps {
   isLoggedIn: boolean;
@@ -15,6 +38,7 @@ interface TransfersPageProps {
   transportOptions: TransportOption[];
   onAirportSelect: (display: string, code: string) => void;
   airports: AirportOption[];
+  fareSummary?: FareSummary;
 }
 
 const TransfersPage = ({
@@ -25,11 +49,13 @@ const TransfersPage = ({
   onAirportSelect,
   airports,
   searchQuery: initialSearchQuery,
+  fareSummary,
 }: TransfersPageProps) => {
   const [filters, setFilters] = useState<FilterState>({
     transportModes: {
       taxi: true,
       bus: true,
+      coach: true,
       train: true,
       subway: true
     },
@@ -43,8 +69,6 @@ const TransfersPage = ({
     flexibleTicketsOnly: false,
     firstClassOnly: false
   });
-
-  const [sortBy] = useState<string>('price');
 
   const [activeTab, setActiveTab] = useState('best-overall');
 
@@ -176,7 +200,7 @@ const TransfersPage = ({
               transportOptions={sortedTransports[activeTab as keyof typeof sortedTransports]}
               filters={filters}
               selectedAirport={selectedAirport}
-              sortBy={sortBy}
+              fareSummary={fareSummary}
             />
 
             {/* Pro Tips Section */}
@@ -191,6 +215,62 @@ const TransfersPage = ({
                 </ul>
               </div>
             </div>
+
+            {/* Fare Guide Section */}
+            {fareSummary && (
+              <div className="mt-8">
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full text-left">
+                    <h3 className="text-lg font-semibold">Fare Guide</h3>
+                    <ChevronDown className="h-4 w-4" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-4">
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      {/* eslint-disable @typescript-eslint/no-explicit-any */}
+                      {fareSummary.modes && Object.entries(fareSummary.modes).map(([mode, data]: [string, unknown]) => (
+                        <div key={mode} className="mb-4 last:mb-0">
+                          <h4 className="font-medium capitalize mb-2">{mode.replace('_', ' ')}</h4>
+                          <p className="text-sm text-gray-700 mb-2">{(data as any).summary}</p>
+                          {(data as any).payment && (
+                            <div className="text-xs text-gray-600">
+                              {(data as any).payment.not_allowed && (data as any).payment.not_allowed.length > 0 && (
+                                <p>Not accepted: {(data as any).payment.not_allowed.join(', ')}</p>
+                              )}
+                              {(data as any).payment.allowed && (data as any).payment.allowed.length > 0 && (
+                                <p>Accepted: {(data as any).payment.allowed.join(', ')}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {/* eslint-enable @typescript-eslint/no-explicit-any */}
+                      {/* eslint-disable @typescript-eslint/no-explicit-any */}
+                      {fareSummary.airports && fareSummary.airports.terminals && Object.entries(fareSummary.airports.terminals).map(([iata, terminal]: [string, unknown]) => (
+                        <div key={iata} className="mb-4 last:mb-0">
+                          <h4 className="font-medium">{iata} Airport</h4>
+                          {(terminal as any).services && (terminal as any).services.map((service: unknown, idx: number) => (
+                            <div key={idx} className="ml-4 mt-2">
+                              <p className="text-sm font-medium">{(service as any).name}</p>
+                              {(service as any).payment && (
+                                <div className="text-xs text-gray-600">
+                                  {(service as any).payment.not_allowed && (service as any).payment.not_allowed.length > 0 && (
+                                    <p>Not accepted: {(service as any).payment.not_allowed.join(', ')}</p>
+                                  )}
+                                  {(service as any).payment.allowed && (service as any).payment.allowed.length > 0 && (
+                                    <p>Accepted: {(service as any).payment.allowed.join(', ')}</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                      {/* eslint-enable @typescript-eslint/no-explicit-any */}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            )}
           </div>
         </main>
       </div>

@@ -44,7 +44,7 @@ def _is_final_array(obj: Any) -> bool:
 
 def _sanitize_json(text: str) -> Optional[Any]:
     """Attempt to fix common JSON errors and return parsed result.
-    
+
     Fixes include:
     - Removing trailing commas in objects/arrays
     - Wrapping bare values in an object if needed
@@ -59,7 +59,7 @@ def _sanitize_json(text: str) -> Optional[Any]:
         pass
 
     # Remove trailing commas before } or ]
-    text = re.sub(r',\s*([}\]])', r'\1', text)
+    text = re.sub(r",\s*([}\]])", r"\1", text)
 
     try:
         return json.loads(text)
@@ -143,7 +143,9 @@ def _extract_first_json(text: str) -> Optional[Any]:
     return None
 
 
-def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 20) -> List[Dict[str, Any]]:
+def run_airport_lookup(
+    iata: str, model: str = "gpt-oss:120b", max_iters: int = 20
+) -> List[Dict[str, Any]]:
     """Run the agent loop for an airport and return final transport list.
 
     The agent operates in a loop where the LLM can emit ONE of TWO JSON responses:
@@ -191,12 +193,28 @@ def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 
                 hits = res
             for item in hits[:top_n]:
                 try:
-                    title = item.get("title") or item.get("headline") or item.get("name") or ""
+                    title = (
+                        item.get("title")
+                        or item.get("headline")
+                        or item.get("name")
+                        or ""
+                    )
                     url = item.get("url") or item.get("link") or ""
                     score = item.get("score") if item.get("score") is not None else None
-                    content = item.get("content") or item.get("snippet") or item.get("raw_content") or ""
-                    snippet = (content[:300] + "...") if isinstance(content, str) and len(content) > 300 else content
-                    out.append({"title": title, "url": url, "score": score, "snippet": snippet})
+                    content = (
+                        item.get("content")
+                        or item.get("snippet")
+                        or item.get("raw_content")
+                        or ""
+                    )
+                    snippet = (
+                        (content[:300] + "...")
+                        if isinstance(content, str) and len(content) > 300
+                        else content
+                    )
+                    out.append(
+                        {"title": title, "url": url, "score": score, "snippet": snippet}
+                    )
                 except Exception:
                     continue
         except Exception:
@@ -216,7 +234,8 @@ def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 
             try:
                 docs = get_all_airports()
                 for d in docs:
-                    if isinstance(d, dict) and d.get("iata") and d.get("iata").upper() == iata_code.upper():
+                    iata = d.get("iata") if isinstance(d, dict) else None
+                    if iata and iata.upper() == iata_code.upper():
                         city = d.get("city") or d.get("name")
                         break
             except Exception:
@@ -229,7 +248,12 @@ def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 
 
             # If query doesn't already ask for a full stop list, append guidance
             low = q.lower()
-            if not ("full list" in low or "all stops" in low or "complete station" in low or "full stops" in low):
+            if not (
+                "full list" in low
+                or "all stops" in low
+                or "complete station" in low
+                or "full stops" in low
+            ):
                 q = q + " full list of stops with coordinates and official fares"
         except Exception:
             # Fallback: ensure basic guidance
@@ -242,36 +266,43 @@ def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 
     # NOTE: External tool calls (Tavily) are intentionally disabled for the
     # main agent flow. The model must produce the final JSON array directly
     # using its knowledge and the prompt. No proactive searches will be run.
-    
+
     # Inform the LLM that external search summaries have been provided and
     # must be used when producing the final JSON.
-    messages.append({
-        "role": "system",
-        "content": (
-            "You have been given external search summaries and results in the conversation under the keys `search_summary` and `search_results`. "
-            "NOTE: external search tools are disabled in this run; ignore any instructions to call external tools. Do NOT invent additional stops or pricing beyond what is reasonable. If information is missing, set fields to null."
-        )
-    })
+    messages.append(
+        {
+            "role": "system",
+            "content": (
+                "You have been given external search summaries and results in the conversation under the keys `search_summary` and `search_results`. "
+                "NOTE: external search tools are disabled in this run; ignore any instructions to call external tools. Do NOT invent additional stops or pricing beyond what is reasonable. If information is missing, set fields to null."
+            ),
+        }
+    )
 
     # Add an explicit user instruction to search first
-    messages.append({
-        "role": "user",
-        "content": (
-            f"For airport {iata.upper()}, you MUST first search for current information. "
-            "Do NOT use your training data. Make tool calls to find:"
-            "1. ALL transport modes (rail, underground, bus, coach)"
-            "2. COMPLETE station lists for each route (all stops from airport to city center)"
-            "3. Current official fares and pricing"
-            "4. Accurate coordinates for all stations."
-            "Start by emitting a search request JSON."
-        )
-    })
+    messages.append(
+        {
+            "role": "user",
+            "content": (
+                f"For airport {iata.upper()}, you MUST first search for current information. "
+                "Do NOT use your training data. Make tool calls to find:"
+                "1. ALL transport modes (rail, underground, bus, coach)"
+                "2. COMPLETE station lists for each route (all stops from airport to city center)"
+                "3. Current official fares and pricing"
+                "4. Accurate coordinates for all stations."
+                "Start by emitting a search request JSON."
+            ),
+        }
+    )
 
     for iteration in range(1, max_iters + 1):
         logging.info("Agent iteration %d for %s", iteration, iata)
         # Log the messages we're about to send to the LLM (truncated to avoid huge logs)
         try:
-            logging.debug("Messages sent to LLM (truncated 4000 chars): %s", json.dumps(messages, indent=2)[:4000])
+            logging.debug(
+                "Messages sent to LLM (truncated 4000 chars): %s",
+                json.dumps(messages, indent=2)[:4000],
+            )
         except Exception:
             logging.debug("Messages preview unavailable (non-serializable content)")
         try:
@@ -281,7 +312,12 @@ def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 
             raise
 
         # Log raw response for debugging (first 1000 chars) - use INFO level so it's always visible
-        logging.info("Raw LLM response (iter %d, len=%d): %s", iteration, len(response_text), response_text[:1000])
+        logging.info(
+            "Raw LLM response (iter %d, len=%d): %s",
+            iteration,
+            len(response_text),
+            response_text[:1000],
+        )
 
         # Try parse the LLM response as JSON. Be tolerant of extra text
         parsed = None
@@ -292,8 +328,14 @@ def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 
 
         # Some LLMs wrap a tool call under a top-level `tool_call` key. Unwrap it.
         try:
-            if isinstance(parsed, dict) and parsed.get("tool_call") and isinstance(parsed.get("tool_call"), dict):
-                logging.info("Unwrapping top-level 'tool_call' wrapper from LLM response")
+            if (
+                isinstance(parsed, dict)
+                and parsed.get("tool_call")
+                and isinstance(parsed.get("tool_call"), dict)
+            ):
+                logging.info(
+                    "Unwrapping top-level 'tool_call' wrapper from LLM response"
+                )
                 # preserve any top-level search_results for debugging by attaching to messages
                 wrapper = parsed
                 parsed = wrapper.get("tool_call")
@@ -301,47 +343,68 @@ def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 
                 other_keys = {k: v for k, v in wrapper.items() if k != "tool_call"}
                 if other_keys:
                     try:
-                        logging.debug("Tool wrapper contained extra keys: %s", json.dumps(other_keys)[:2000])
+                        logging.debug(
+                            "Tool wrapper contained extra keys: %s",
+                            json.dumps(other_keys)[:2000],
+                        )
                     except Exception:
-                        logging.debug("Tool wrapper contained extra keys (non-serializable)")
+                        logging.debug(
+                            "Tool wrapper contained extra keys (non-serializable)"
+                        )
         except Exception:
             pass
 
         # Log parsed JSON (if any) for debugging
         try:
-            logging.debug("LLM parsed JSON (pretty): %s", json.dumps(parsed, indent=2)[:4000])
+            logging.debug(
+                "LLM parsed JSON (pretty): %s", json.dumps(parsed, indent=2)[:4000]
+            )
         except Exception:
             logging.debug("Parsed JSON preview unavailable or not serializable")
 
         if parsed is None:
-            logging.warning("LLM did not return parseable JSON on iteration %d. Full raw response:\n%s", iteration, response_text)
+            logging.warning(
+                "LLM did not return parseable JSON on iteration %d. Full raw response:\n%s",
+                iteration,
+                response_text,
+            )
             # Provide increasingly strict instructions if the LLM keeps failing
-            messages.append({
-                "role": "assistant",
-                "content": json.dumps({"error": "invalid_json", "text_excerpt": response_text[:2000]}),
-            })
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": json.dumps(
+                        {"error": "invalid_json", "text_excerpt": response_text[:2000]}
+                    ),
+                }
+            )
 
             if iteration < 3:
-                messages.append({
-                    "role": "user",
-                    "content": (
-                        "Please respond with either a tool-call JSON or a final JSON array. "
-                        "Return only JSON. Do not include prose."
-                    ),
-                })
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "Please respond with either a tool-call JSON or a final JSON array. "
+                            "Return only JSON. Do not include prose."
+                        ),
+                    }
+                )
             else:
                 # After a few failed tries, give a very strict minimal template
-                messages.append({
-                    "role": "user",
-                    "content": (
-                        "You must now ONLY respond with valid JSON. "
-                        "If you want me to run searches, reply with: {\"tool\": \"tavily_search\", \"queries\": [{\"id\": \"q1\", \"query\": \"...\"}]}. "
-                        "If you can answer directly, return a top-level JSON array like: [{\"iata\": \"LHR\", \"name\": \"Heathrow\", ... }]."
-                    ),
-                })
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "You must now ONLY respond with valid JSON. "
+                            'If you want me to run searches, reply with: {"tool": "tavily_search", "queries": [{"id": "q1", "query": "..."}]}. '
+                            'If you can answer directly, return a top-level JSON array like: [{"iata": "LHR", "name": "Heathrow", ... }].'
+                        ),
+                    }
+                )
             continue
 
-        logging.info("Parsed LLM output type=%s on iteration %d", type(parsed), iteration)
+        logging.info(
+            "Parsed LLM output type=%s on iteration %d", type(parsed), iteration
+        )
 
         # If final array, validate and return
         if _is_final_array(parsed):
@@ -349,23 +412,59 @@ def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 
             logging.info("Number of transport options: %d", len(parsed))
             for idx, transport in enumerate(parsed):
                 stops_count = len(transport.get("stops", []))
-                logging.info("Transport %d: %s (%s) with %d stops", idx + 1, transport.get("name"), transport.get("mode"), stops_count)
+                logging.info(
+                    "Transport %d: %s (%s) with %d stops",
+                    idx + 1,
+                    transport.get("name"),
+                    transport.get("mode"),
+                    stops_count,
+                )
             return parsed
 
         # If the model emits a tool call, we do not execute external tools in
         # the main flow. Tell the model tools are disabled and ask it to
         # return the final JSON array directly.
         if _is_tool_call(parsed):
-            logging.info("Model requested a tool call on iteration %d, but external tools are disabled. Parsed: %s", iteration, json.dumps(parsed, indent=2))
-            messages.append({"role": "assistant", "content": json.dumps({"error": "tool_calls_disabled", "received": parsed})})
-            messages.append({"role": "user", "content": "External search tools are disabled. Please return the FINAL JSON array of transports using only the prompt and your knowledge."})
+            logging.info(
+                "Model requested a tool call on iteration %d, but external tools are disabled. Parsed: %s",
+                iteration,
+                json.dumps(parsed, indent=2),
+            )
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": json.dumps(
+                        {"error": "tool_calls_disabled", "received": parsed}
+                    ),
+                }
+            )
+            messages.append(
+                {
+                    "role": "user",
+                    "content": "External search tools are disabled. Please return the FINAL JSON array of transports using only the prompt and your knowledge.",
+                }
+            )
             continue
 
         # Unknown JSON shape: ask LLM to clarify / produce either tool call or final array
-        logging.warning("LLM returned unknown JSON shape on iteration %d: %s", iteration, type(parsed))
+        logging.warning(
+            "LLM returned unknown JSON shape on iteration %d: %s",
+            iteration,
+            type(parsed),
+        )
         logging.warning("Unknown shape details: %s", json.dumps(parsed, indent=2)[:500])
-        messages.append({"role": "assistant", "content": json.dumps({"error": "unknown_shape", "received": parsed})})
-        messages.append({"role": "user", "content": "Please produce either a tool-call JSON (e.g. {\"tool\": \"tavily_search\", \"query\": \"...\"}) or a final JSON array of transports."})
+        messages.append(
+            {
+                "role": "assistant",
+                "content": json.dumps({"error": "unknown_shape", "received": parsed}),
+            }
+        )
+        messages.append(
+            {
+                "role": "user",
+                "content": 'Please produce either a tool-call JSON (e.g. {"tool": "tavily_search", "query": "..."}) or a final JSON array of transports.',
+            }
+        )
 
     # Fallback: generate a default/empty transport array so the system doesn't crash
     # Log the failure for investigation
@@ -374,7 +473,11 @@ def run_airport_lookup(iata: str, model: str = "gpt-oss:120b", max_iters: int = 
         "Returning empty fallback array. Last few messages:\n%s",
         max_iters,
         iata,
-        json.dumps(messages[-3:], indent=2) if len(messages) >= 3 else json.dumps(messages, indent=2)
+        (
+            json.dumps(messages[-3:], indent=2)
+            if len(messages) >= 3
+            else json.dumps(messages, indent=2)
+        ),
     )
     # Return an empty array instead of raising, so the API doesn't crash
     return []
