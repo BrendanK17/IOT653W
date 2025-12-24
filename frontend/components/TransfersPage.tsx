@@ -226,6 +226,7 @@ const TransfersPage = ({
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-4">
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      {/* eslint-disable @typescript-eslint/no-explicit-any */}
                       {fareSummary.modes && Object.entries(fareSummary.modes).map(([mode, data]: [string, unknown]) => (
                         <div key={mode} className="mb-4 last:mb-0">
                           <h4 className="font-medium capitalize mb-2">{mode.replace('_', ' ')}</h4>
@@ -242,6 +243,8 @@ const TransfersPage = ({
                           )}
                         </div>
                       ))}
+                      {/* eslint-enable @typescript-eslint/no-explicit-any */}
+                      {/* eslint-disable @typescript-eslint/no-explicit-any */}
                       {fareSummary.airports && fareSummary.airports.terminals && Object.entries(fareSummary.airports.terminals).map(([iata, terminal]: [string, unknown]) => (
                         <div key={iata} className="mb-4 last:mb-0">
                           <h4 className="font-medium">{iata} Airport</h4>
@@ -262,6 +265,7 @@ const TransfersPage = ({
                           ))}
                         </div>
                       ))}
+                      {/* eslint-enable @typescript-eslint/no-explicit-any */}
                     </div>
                   </CollapsibleContent>
                 </Collapsible>

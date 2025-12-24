@@ -86,8 +86,8 @@ const convertTransportOptions = (options: BackendTransportOption[], airportCode:
     if (backendStops && backendStops.length) {
       const amounts: number[] = [];
       for (const s of backendStops) {
-        if (Array.isArray((s as any).prices)) {
-          for (const p of (s as any).prices) {
+        if (Array.isArray((s as any).prices)) { // eslint-disable-line @typescript-eslint/no-explicit-any
+          for (const p of (s as any).prices) { // eslint-disable-line @typescript-eslint/no-explicit-any
             const a = Number(p?.amount);
             if (!Number.isNaN(a) && a > 0) amounts.push(a);
           }
@@ -108,7 +108,7 @@ const convertTransportOptions = (options: BackendTransportOption[], airportCode:
     let route = option.route || option.name || '';
     if (!route && backendStops && backendStops.length) {
       const last = backendStops[backendStops.length - 1];
-      route = `${option.name || ''} → ${(last as any)?.stop_name || ''}`.trim();
+      route = `${option.name || ''} → ${(last as any)?.stop_name || ''}`.trim(); // eslint-disable-line @typescript-eslint/no-explicit-any
     }
 
     // co2: backend may have null
