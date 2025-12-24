@@ -8,12 +8,14 @@ import { Train, Bus, Car, Clock, ExternalLink, Map, Leaf } from 'lucide-react';
 interface TransportCardProps {
   transport: TransportOption;
   onShowMap: () => void;
+  fareSummary?: any;
 }
 
 const getTransportIcon = (mode: TransportMode) => {
   switch (mode) {
     case 'train': return <Train className="w-5 h-5" />;
     case 'bus': return <Bus className="w-5 h-5" />;
+    case 'coach': return <Bus className="w-5 h-5" />;
     case 'taxi': return <Car className="w-5 h-5" />;
     case 'subway': return <Train className="w-5 h-5" />;
     default: return <Train className="w-5 h-5" />;
@@ -22,7 +24,58 @@ const getTransportIcon = (mode: TransportMode) => {
 
 
 
-export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowMap }) => {
+export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowMap, fareSummary }) => {
+  const getFareBadges = () => {
+    if (!fareSummary || !fareSummary.modes) return [];
+
+    const modeMap: Record<string, string> = {
+      subway: 'metro_tube',
+      train: 'train_rail',
+      bus: 'bus',
+      coach: 'coach',
+      taxi: 'other'
+    };
+
+    const fareMode = modeMap[transport.mode] || 'other';
+    const modeData = fareSummary.modes[fareMode];
+    if (!modeData || !modeData.payment) return [];
+
+    const badges = [];
+    const { allowed, not_allowed } = modeData.payment;
+
+    if (not_allowed && not_allowed.includes('oyster')) {
+      badges.push(
+        <Badge key="no-oyster" variant="secondary" className="bg-red-100 text-red-800">
+          ❌ Oyster
+        </Badge>
+      );
+    }
+    if (not_allowed && not_allowed.includes('contactless')) {
+      badges.push(
+        <Badge key="no-contactless" variant="secondary" className="bg-red-100 text-red-800">
+          ❌ Contactless
+        </Badge>
+      );
+    }
+    if (allowed && allowed.includes('contactless')) {
+      badges.push(
+        <Badge key="contactless" variant="secondary" className="bg-green-100 text-green-800">
+          💳 Contactless
+        </Badge>
+      );
+    }
+    if (allowed && allowed.includes('oyster')) {
+      badges.push(
+        <Badge key="oyster" variant="secondary" className="bg-green-100 text-green-800">
+          🦪 Oyster
+        </Badge>
+      );
+    }
+    // Add more as needed
+
+    return badges;
+  };
+
   return (
     <Card className="p-4 sm:p-6 hover:shadow-lg transition-shadow bg-white border border-gray-200">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
@@ -33,21 +86,7 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <h3 className="font-bold text-base sm:text-lg capitalize text-gray-900">{transport.name}</h3>
-              {transport.isEco && (
-                <Badge variant="secondary" className="bg-green-100 text-green-800">
-                  🌱 Eco-Friendly
-                </Badge>
-              )}
-              {transport.isFastest && (
-                <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                  ⚡ Fastest
-                </Badge>
-              )}
-              {transport.isCheapest && (
-                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                  💰 Best Value
-                </Badge>
-              )}
+              {getFareBadges()}
             </div>
             <p className="text-sm text-gray-600 mb-1">{transport.route}</p>
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">

@@ -28,7 +28,8 @@ const convertTransportOptions = (options: any[], airportCode: string): Transport
     if (!m) return 'train';
     const mm = m.toLowerCase();
     if (mm === 'rail' || mm === 'train') return 'train';
-    if (mm === 'coach' || mm === 'bus') return 'bus';
+    if (mm === 'bus') return 'bus';
+    if (mm === 'coach') return 'coach';
     if (mm === 'underground' || mm === 'subway' || mm === 'tube') return 'subway';
     if (mm === 'taxi' || mm === 'cab' || mm === 'ride_hailing') return 'taxi';
     return 'train';
@@ -135,12 +136,14 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
   const airportName = getAirportNameFromCode(airportCode || '', airports);
   // transport options loaded from backend for the given airport code
   const [transportOptionsState, setTransportOptionsState] = useState<TransportOption[]>([]);
+  const [fareSummary, setFareSummary] = useState<any>(null);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       if (!airportCode) {
         setTransportOptionsState([]);
+        setFareSummary(null);
         return;
       }
       const code = airportCode.toUpperCase();
@@ -156,10 +159,27 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
       } catch (e) {
         if (mounted) setTransportOptionsState([]);
       }
+
+      // Load fare summary
+      const selectedOption = airports.find(o => o.iata?.toUpperCase() === code || o.value?.toUpperCase() === code);
+      const city = selectedOption?.city?.toUpperCase();
+      if (city) {
+        try {
+          const res = await fetch(`${API_BASE}/cities/${city}/fares`);
+          if (res.ok) {
+            const data = await res.json();
+            if (mounted) setFareSummary(data.fare_summary);
+          }
+        } catch (e) {
+          // ignore
+        }
+      } else {
+        if (mounted) setFareSummary(null);
+      }
     };
     load();
     return () => { mounted = false; };
-  }, [airportCode]);
+  }, [airportCode, airports]);
 
   const transportOptions = transportOptionsState;
 
@@ -207,6 +227,7 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
       transportOptions={transportOptions}
       onAirportSelect={onAirportSelect}
       airports={airports}
+      fareSummary={fareSummary}
     />
   );
 };

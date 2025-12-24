@@ -8,6 +8,7 @@ export interface FilterState {
   transportModes: {
     taxi: boolean;
     bus: boolean;
+    coach: boolean;
     train: boolean;
     subway: boolean;
   };
@@ -30,6 +31,7 @@ interface FilterSidebarProps {
 const transportModeIcons = {
   taxi: Car,
   bus: Bus,
+  coach: Bus,
   train: Train,
   subway: Train,
 };

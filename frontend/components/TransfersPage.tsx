@@ -6,6 +6,8 @@ import { TransferList } from './transport/TransferList';
 import type { FilterState } from './transport/FilterSidebar';
 import { Button } from './ui/button';
 import { SearchBox, AirportDropdown, AirportOption } from './search/SearchComponents';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { ChevronDown } from 'lucide-react';
 
 interface TransfersPageProps {
   isLoggedIn: boolean;
@@ -15,6 +17,7 @@ interface TransfersPageProps {
   transportOptions: TransportOption[];
   onAirportSelect: (display: string, code: string) => void;
   airports: AirportOption[];
+  fareSummary?: any;
 }
 
 const TransfersPage = ({
@@ -25,11 +28,13 @@ const TransfersPage = ({
   onAirportSelect,
   airports,
   searchQuery: initialSearchQuery,
+  fareSummary,
 }: TransfersPageProps) => {
   const [filters, setFilters] = useState<FilterState>({
     transportModes: {
       taxi: true,
       bus: true,
+      coach: true,
       train: true,
       subway: true
     },
@@ -177,6 +182,7 @@ const TransfersPage = ({
               filters={filters}
               selectedAirport={selectedAirport}
               sortBy={sortBy}
+              fareSummary={fareSummary}
             />
 
             {/* Pro Tips Section */}
@@ -191,6 +197,58 @@ const TransfersPage = ({
                 </ul>
               </div>
             </div>
+
+            {/* Fare Guide Section */}
+            {fareSummary && (
+              <div className="mt-8">
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full text-left">
+                    <h3 className="text-lg font-semibold">Fare Guide</h3>
+                    <ChevronDown className="h-4 w-4" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-4">
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      {fareSummary.modes && Object.entries(fareSummary.modes).map(([mode, data]: [string, any]) => (
+                        <div key={mode} className="mb-4 last:mb-0">
+                          <h4 className="font-medium capitalize mb-2">{mode.replace('_', ' ')}</h4>
+                          <p className="text-sm text-gray-700 mb-2">{data.summary}</p>
+                          {data.payment && (
+                            <div className="text-xs text-gray-600">
+                              {data.payment.not_allowed && data.payment.not_allowed.length > 0 && (
+                                <p>Not accepted: {data.payment.not_allowed.join(', ')}</p>
+                              )}
+                              {data.payment.allowed && data.payment.allowed.length > 0 && (
+                                <p>Accepted: {data.payment.allowed.join(', ')}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {fareSummary.airports && fareSummary.airports.terminals && Object.entries(fareSummary.airports.terminals).map(([iata, terminal]: [string, any]) => (
+                        <div key={iata} className="mb-4 last:mb-0">
+                          <h4 className="font-medium">{iata} Airport</h4>
+                          {terminal.services && terminal.services.map((service: any, idx: number) => (
+                            <div key={idx} className="ml-4 mt-2">
+                              <p className="text-sm font-medium">{service.name}</p>
+                              {service.payment && (
+                                <div className="text-xs text-gray-600">
+                                  {service.payment.not_allowed && service.payment.not_allowed.length > 0 && (
+                                    <p>Not accepted: {service.payment.not_allowed.join(', ')}</p>
+                                  )}
+                                  {service.payment.allowed && service.payment.allowed.length > 0 && (
+                                    <p>Accepted: {service.payment.allowed.join(', ')}</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            )}
           </div>
         </main>
       </div>

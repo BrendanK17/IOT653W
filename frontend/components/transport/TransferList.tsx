@@ -9,13 +9,15 @@ interface TransferListProps {
   filters: FilterState;
   selectedAirport: string;
   sortBy: string;
+  fareSummary?: any;
 }
 
 export function TransferList({
   transportOptions,
   filters,
   selectedAirport,
-  sortBy: _sortBy
+  sortBy: _sortBy,
+  fareSummary,
 }: TransferListProps) {
   const [selectedTransfer, setSelectedTransfer] = useState<TransportOption | null>(null);
   const airportCode = selectedAirport.match(/\(([^)]+)\)/)?.[1] || selectedAirport;
@@ -44,6 +46,7 @@ export function TransferList({
               key={transfer.id}
               transport={transfer}
               onShowMap={() => setSelectedTransfer(transfer)}
+              fareSummary={fareSummary}
             />
           ))}
       </div>
