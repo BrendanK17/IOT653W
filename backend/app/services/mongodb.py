@@ -13,12 +13,13 @@ TESTING = os.getenv("TESTING", "0").lower() in ("1", "true", "yes")
 # Create a client. When testing, prefer an in-memory mongomock client to avoid network calls.
 # Use `Any` here so type checkers accept index access like `client[DB_NAME]` for both
 # the real `MongoClient` and `mongomock.MongoClient`.
-client: Any = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
 if TESTING:
     try:
-        client.admin.command("ping")
-        print("Pinged your deployment. You successfully connected to MongoDB!")
-    except Exception as e:
+        from mongomock import MongoClient as MockMongoClient
+
+        client: Any = MockMongoClient()
+        print("Using mongomock for testing")
+    except ImportError as e:
         raise ImportError(
             "mongomock is required for testing. Install dev dependencies (e.g. `poetry install --with dev`)."
         ) from e
