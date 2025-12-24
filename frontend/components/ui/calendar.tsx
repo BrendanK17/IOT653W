@@ -60,12 +60,12 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        // @ts-ignore
-        IconLeft: ({ className, ...props }: any) => (
+        // @ts-expect-error: React Day Picker component props are not fully typed
+        IconLeft: ({ className, ...props }: { className?: string; [key: string]: unknown }) => (
           <ChevronLeft className={cn("size-4", className)} {...props} />
         ),
-        // @ts-ignore
-        IconRight: ({ className, ...props }: any) => (
+        // @ts-expect-error: React Day Picker component props are not fully typed
+        IconRight: ({ className, ...props }: { className?: string; [key: string]: unknown }) => (
           <ChevronRight className={cn("size-4", className)} {...props} />
         ),
       }}

@@ -104,7 +104,7 @@ ${colorConfig
 
 const ChartTooltip = RechartsPrimitive.Tooltip;
 
-// @ts-ignore
+// @ts-expect-error: Recharts types are not fully compatible
 function ChartTooltipContent({
   active,
   payload,
@@ -119,8 +119,8 @@ function ChartTooltipContent({
   color,
   nameKey,
   labelKey,
-}: any) {
-  // @ts-ignore
+}: Record<string, unknown>) {
+  // @ts-expect-error: Recharts types are not fully compatible
   const { config } = useChart();
 
   const tooltipLabel = React.useMemo(() => {
@@ -174,7 +174,7 @@ function ChartTooltipContent({
     >
       {!nestLabel ? tooltipLabel : null}
       <div className="grid gap-1.5">
-        {/* @ts-ignore */}
+        {/* @ts-expect-error: Recharts payload types are complex */}
         {payload.map((item, index) => {
           const key = `${nameKey || item.name || item.dataKey || "value"}`;
           const itemConfig = getPayloadConfigFromPayload(config, item, key);
@@ -246,14 +246,14 @@ function ChartTooltipContent({
 
 const ChartLegend = RechartsPrimitive.Legend;
 
-// @ts-ignore
+// @ts-expect-error: Recharts types are not fully compatible
 function ChartLegendContent({
   className,
   hideIcon = false,
   payload,
   verticalAlign = "bottom",
   nameKey,
-}: any) {
+}: Record<string, unknown>) {
   const { config } = useChart();
 
   if (!payload?.length) {
@@ -268,7 +268,7 @@ function ChartLegendContent({
         className,
       )}
     >
-      {/* @ts-ignore */}
+      {/* @ts-expect-error: Recharts payload types are complex */}
       {payload.map((item) => {
         const key = `${nameKey || item.dataKey || "value"}`;
         const itemConfig = getPayloadConfigFromPayload(config, item, key);

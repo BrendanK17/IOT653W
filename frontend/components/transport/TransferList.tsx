@@ -9,14 +9,13 @@ interface TransferListProps {
   filters: FilterState;
   selectedAirport: string;
   sortBy: string;
-  fareSummary?: any;
+  fareSummary?: unknown;
 }
 
 export function TransferList({
   transportOptions,
   filters,
   selectedAirport,
-  sortBy: _sortBy,
   fareSummary,
 }: TransferListProps) {
   const [selectedTransfer, setSelectedTransfer] = useState<TransportOption | null>(null);

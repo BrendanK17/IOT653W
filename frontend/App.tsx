@@ -22,7 +22,7 @@ const extractAirportCode = (airportString: string): string => {
 };
 
 // Convert transport options from backend API format to component format
-const convertTransportOptions = (options: any[], airportCode: string): TransportOption[] => {
+const convertTransportOptions = (options: unknown[], airportCode: string): TransportOption[] => {
   // helper to map backend modes to our frontend modes
   const mapMode = (m: string) => {
     if (!m) return 'train';
@@ -139,7 +139,7 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
   const airportName = getAirportNameFromCode(airportCode || '', airports);
   // transport options loaded from backend for the given airport code
   const [transportOptionsState, setTransportOptionsState] = useState<TransportOption[]>([]);
-  const [fareSummary, setFareSummary] = useState<any>(null);
+  const [fareSummary, setFareSummary] = useState<unknown>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -411,7 +411,7 @@ function App() {
   // login using top-level alias
   const handleLoginApi = async (email: string, password: string) => {
     try {
-      const res = await fetch(`${(import.meta as any).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/login`, {
+      const res = await fetch(`${(import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include', // send/receive refresh cookie
@@ -438,7 +438,7 @@ function App() {
 
   const handleRegister = async (email: string, password: string) => {
     try {
-      const res = await fetch(`${(import.meta as any).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/register`, {
+      const res = await fetch(`${(import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -460,7 +460,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${(import.meta as any).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/auth/logout`, { method: 'POST', credentials: 'include' });
+      await fetch(`${(import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/auth/logout`, { method: 'POST', credentials: 'include' });
     } catch (e) {
       // ignore network errors during logout
       console.error('logout error', e);
@@ -497,7 +497,7 @@ function App() {
         const res = await fetch(`${API_BASE}/airports`);
         if (!res.ok) return;
         const body = await res.json();
-        const docs: any[] = body.airports || [];
+        const docs: unknown[] = body.airports || [];
 
         // build airport option objects
         const options: AirportOption[] = docs.map((d, idx) => ({
@@ -606,7 +606,7 @@ function App() {
                   searchQuery={appState.searchQuery}
                   onSearchChange={(query) => setAppState(prev => ({ ...prev, searchQuery: query }))}
                   onSearch={() => {
-                    const code = (appState as any).selectedAirportCode || extractAirportCode(appState.selectedAirport || appState.searchQuery);
+                    const code = (appState as unknown as { selectedAirportCode?: string }).selectedAirportCode || extractAirportCode(appState.selectedAirport || appState.searchQuery);
                     if (code) {
                       navigate(`/${code.toLowerCase()}`);
                     }

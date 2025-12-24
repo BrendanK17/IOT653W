@@ -1,4 +1,4 @@
-const API_BASE: string = (import.meta as any).env?.VITE_API_BASE || 'http://127.0.0.1:8000';
+const API_BASE: string = (import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE || 'http://127.0.0.1:8000';
 
 export const parseJwt = (token: string | null) => {
   if (!token) return null;
@@ -18,8 +18,8 @@ export const parseJwt = (token: string | null) => {
 
 export const refreshAccessToken = async (): Promise<string | null> => {
   // Deduplicate concurrent refresh requests by reusing the same in-flight promise
-  if ((refreshAccessToken as any)._inFlight) {
-    return (refreshAccessToken as any)._inFlight;
+  if ((refreshAccessToken as unknown as { _inFlight?: Promise<string | null> })._inFlight) {
+    return (refreshAccessToken as unknown as { _inFlight?: Promise<string | null> })._inFlight;
   }
 
   const promise = (async () => {
@@ -40,13 +40,13 @@ export const refreshAccessToken = async (): Promise<string | null> => {
     return null;
   })();
 
-  (refreshAccessToken as any)._inFlight = promise;
+  (refreshAccessToken as unknown as { _inFlight?: Promise<string | null> })._inFlight = promise;
   try {
     const result = await promise;
     return result;
   } finally {
     // clear in-flight so future refreshes are possible
-    (refreshAccessToken as any)._inFlight = null;
+    (refreshAccessToken as unknown as { _inFlight?: Promise<string | null> })._inFlight = null;
   }
 };
 

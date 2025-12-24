@@ -12,7 +12,6 @@ interface ResultsPageProps {
 }
 
 export const ResultsPage: React.FC<ResultsPageProps> = ({
-  isLoggedIn: _isLoggedIn,
   transportOptions,
   onNavigateToInsights,
   onNavigateToTransfers,

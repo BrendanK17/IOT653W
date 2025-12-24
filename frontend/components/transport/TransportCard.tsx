@@ -8,7 +8,7 @@ import { Train, Bus, Car, Clock, ExternalLink, Map, Leaf } from 'lucide-react';
 interface TransportCardProps {
   transport: TransportOption;
   onShowMap: () => void;
-  fareSummary?: any;
+  fareSummary?: unknown;
 }
 
 const getTransportIcon = (mode: TransportMode) => {

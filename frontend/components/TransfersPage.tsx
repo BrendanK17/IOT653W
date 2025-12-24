@@ -17,7 +17,7 @@ interface TransfersPageProps {
   transportOptions: TransportOption[];
   onAirportSelect: (display: string, code: string) => void;
   airports: AirportOption[];
-  fareSummary?: any;
+  fareSummary?: unknown;
 }
 
 const TransfersPage = ({
@@ -208,7 +208,7 @@ const TransfersPage = ({
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-4">
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                      {fareSummary.modes && Object.entries(fareSummary.modes).map(([mode, data]: [string, any]) => (
+                      {fareSummary.modes && Object.entries(fareSummary.modes).map(([mode, data]: [string, unknown]) => (
                         <div key={mode} className="mb-4 last:mb-0">
                           <h4 className="font-medium capitalize mb-2">{mode.replace('_', ' ')}</h4>
                           <p className="text-sm text-gray-700 mb-2">{data.summary}</p>
@@ -224,10 +224,10 @@ const TransfersPage = ({
                           )}
                         </div>
                       ))}
-                      {fareSummary.airports && fareSummary.airports.terminals && Object.entries(fareSummary.airports.terminals).map(([iata, terminal]: [string, any]) => (
+                      {fareSummary.airports && fareSummary.airports.terminals && Object.entries(fareSummary.airports.terminals).map(([iata, terminal]: [string, unknown]) => (
                         <div key={iata} className="mb-4 last:mb-0">
                           <h4 className="font-medium">{iata} Airport</h4>
-                          {terminal.services && terminal.services.map((service: any, idx: number) => (
+                          {terminal.services && terminal.services.map((service: unknown, idx: number) => (
                             <div key={idx} className="ml-4 mt-2">
                               <p className="text-sm font-medium">{service.name}</p>
                               {service.payment && (
