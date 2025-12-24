@@ -5,10 +5,14 @@ import os
 from jose import jwt
 
 # Prefer AUTH_SECRET_KEY, fall back to SECRET_KEY. Ensure a non-empty string for mypy.
+TESTING = os.getenv("TESTING", "0").lower() in ("1", "true", "yes")
 _secret = os.getenv("SECRET_KEY")
-if not _secret:
+
+if not TESTING and not _secret:
     raise RuntimeError("SECRET_KEY must be set in the environment")
-SECRET_KEY: str = _secret
+
+# Use a dummy secret for testing if not provided
+SECRET_KEY: str = _secret or "dummy_secret_for_testing"
 
 ALGORITHM = "HS256"
 
