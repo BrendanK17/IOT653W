@@ -1,44 +1,59 @@
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
-from dotenv import load_dotenv
 import os
-from typing import Any
-
-load_dotenv()
 
 # Environment flags
 MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
-TESTING = os.getenv("TESTING", "0").lower() in ("1", "true", "yes")
 
-# Create a client. When testing, prefer an in-memory mongomock client to avoid network calls.
-# Use `Any` here so type checkers accept index access like `client[DB_NAME]` for both
-# the real `MongoClient` and `mongomock.MongoClient`.
-if TESTING:
-    try:
-        from mongomock import MongoClient as MockMongoClient
+if not MONGODB_CONNECTION_STRING:
+    raise ValueError("MONGODB_CONNECTION_STRING is not set")
 
-        client: Any = MockMongoClient()
-        print("Using mongomock for testing")
-    except ImportError as e:
-        raise ImportError(
-            "mongomock is required for testing. Install dev dependencies (e.g. `poetry install --with dev`)."
-        ) from e
-else:
-    if not MONGODB_CONNECTION_STRING:
-        raise ValueError("MONGODB_CONNECTION_STRING is not set")
-
-    # Create a real MongoDB client and verify connection
-    client = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
-    try:
-        client.admin.command("ping")
-        print("Pinged your deployment. You successfully connected to MongoDB!")
-    except Exception as e:
-        print(e)
+# Create a real MongoDB client and verify connection
+client = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
+try:
+    client.admin.command("ping")
+    print("Pinged your deployment. You successfully connected to MongoDB!")
+except Exception as e:
+    print(e)
 
 
 # --- Climatiq Response Collection ---
 DB_NAME = "iot653u_db"  # You can change this to your preferred DB name
 CLIMATIQ_COLLECTION = "climatiq_responses"
+
+# --- Climatiq Activity IDs Collection ---
+CLIMATIQ_IDS_COLLECTION = "climatiq_activity_ids"
+
+
+def save_activity_ids(location: str, activity_ids: list):
+    """
+    Save activity IDs for a location to MongoDB.
+    Args:
+        location: The location key (e.g., "GB")
+        activity_ids: List of activity IDs
+    """
+    db = client[DB_NAME]
+    collection = db[CLIMATIQ_IDS_COLLECTION]
+    # Upsert: update if exists, insert if not
+    collection.update_one(
+        {"location": location},
+        {"$set": {"activity_ids": activity_ids}},
+        upsert=True
+    )
+
+
+def get_activity_ids(location: str):
+    """
+    Retrieve activity IDs for a location from MongoDB.
+    Args:
+        location: The location key (e.g., "GB")
+    Returns:
+        List of activity IDs or empty list
+    """
+    db = client[DB_NAME]
+    collection = db[CLIMATIQ_IDS_COLLECTION]
+    doc = collection.find_one({"location": location})
+    return doc.get("activity_ids", []) if doc else []
 
 
 def save_climatiq_response(query_params: dict, response: dict):

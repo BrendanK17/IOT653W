@@ -18,6 +18,13 @@ def get_all_airports() -> List[Dict[str, Any]]:
     return docs
 
 
+def get_airport_by_iata(iata: str) -> Optional[Dict[str, Any]]:
+    db = get_db()
+    col = db[AIRPORTS_COLLECTION]
+    doc = col.find_one({"iata": iata.upper()}, {"_id": 0})
+    return doc
+
+
 def upsert_airport(doc: Dict[str, Any]):
     db = get_db()
     col = db[AIRPORTS_COLLECTION]

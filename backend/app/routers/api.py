@@ -1,10 +1,12 @@
 from app.services.climatiq import get_emission_factors
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Body
+from fastapi.responses import PlainTextResponse
 from app.services.ollama import ask_ollama
 import logging
 from fastapi import HTTPException
 from app.services.airports import (
     get_all_airports,
+    get_airport_by_iata,
     replace_airports_for_country,
     replace_all_airports,
     log_prompt,
@@ -33,6 +35,7 @@ from app.services.city_fares import (
     generate_fare_summary_for_city,
     log_fare_summary_prompt,
 )
+from app.services.mongodb import get_activity_ids, save_activity_ids
 
 router = APIRouter(tags=["Example"])
 
@@ -62,15 +65,80 @@ def query_climatiq(
     mode_of_transport: str = Query("national rail", description="Mode of transport"),
     region: str = Query("GB", description="Region code"),
     source_lca_activity: str = Query(
-        "fuel_combustion", description="Source LCA activity"
+        "well_to_tank", description="Source LCA activity"
     ),
+    passengers: int = Query(4, description="Number of passengers"),
+    distance: int = Query(100, description="Distance in km"),
 ):
-    """Query Climatiq for emission factors."""
+    """Query Climatiq for emission factors (combined search and estimate)."""
     try:
-        result = get_emission_factors(mode_of_transport, region, source_lca_activity)
+        result = get_emission_factors(mode_of_transport, region, source_lca_activity, passengers, distance)
         return {"result": result}
     except Exception:
         logging.exception("Unexpected error in query_climatiq")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/climatiq/search")
+def climatiq_search(
+    mode_of_transport: str = Query("national rail", description="Mode of transport"),
+    region: str = Query("GB", description="Region code"),
+    source_lca_activity: str = Query(
+        "well_to_tank", description="Source LCA activity"
+    ),
+):
+    """Search for Climatiq activity metadata."""
+    try:
+        result = search_emission_factors(mode_of_transport, region, source_lca_activity)
+        return {"result": result}
+    except Exception:
+        logging.exception("Unexpected error in climatiq_search")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/climatiq/estimate")
+def climatiq_estimate(
+    activity_id: str = Query(..., description="Activity ID from search"),
+    region: str = Query("GB", description="Region code"),
+    source_lca_activity: str = Query(
+        "well_to_tank", description="Source LCA activity"
+    ),
+    passengers: int = Query(4, description="Number of passengers"),
+    distance: int = Query(100, description="Distance in km"),
+):
+    """Estimate emissions for a given activity ID."""
+    try:
+        result = estimate_emission_factors(activity_id, region, source_lca_activity, passengers, distance)
+        return {"result": result}
+    except Exception:
+        logging.exception("Unexpected error in climatiq_estimate")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/climatiq/ids")
+def climatiq_ids(
+    location: str = Query("GB", description="Location code"),
+):
+    """Get activity IDs for a location."""
+    try:
+        activity_ids = get_activity_ids(location)
+        return {"location": location, "activity_ids": activity_ids}
+    except Exception:
+        logging.exception("Unexpected error in climatiq_ids")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/climatiq/ids")
+def update_climatiq_ids(
+    location: str = Query(..., description="Location code"),
+    activity_ids: list[str] = Body(..., description="List of activity IDs"),
+):
+    """Update activity IDs for a location."""
+    try:
+        save_activity_ids(location, activity_ids)
+        return {"message": f"Activity IDs updated for {location}", "count": len(activity_ids)}
+    except Exception:
+        logging.exception("Failed to update activity IDs")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -82,6 +150,21 @@ def api_get_airports():
         return {"airports": docs}
     except Exception:
         logging.exception("Failed to get airports from DB")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/airports/{iata}/country")
+def api_get_airport_country(iata: str):
+    """Return the country for a given IATA airport code."""
+    try:
+        airport = get_airport_by_iata(iata.upper())
+        if not airport:
+            raise HTTPException(status_code=404, detail="Airport not found")
+        return PlainTextResponse(content=airport.get("country"))
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Failed to get airport country from DB")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
