@@ -126,7 +126,6 @@ def enrich_transports_co2_for_airport(
                 {
                     "reason": "mapping_not_configured",
                     "how_to_fix": {
-                        "seed_defaults": "POST /transport-activity-mapping/seed-defaults",
                         "manual_update": "PUT /transport-activity-mapping",
                     },
                 }

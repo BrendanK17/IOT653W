@@ -53,19 +53,6 @@ from app.services.mongodb import save_airport_distance, get_airport_distance
 router = APIRouter(tags=["Example"])
 
 
-ALLOWED_TRANSPORT_MODES = {"underground", "tube", "metro", "train", "rail", "bus", "coach"}
-
-DEFAULT_TRANSPORT_ACTIVITY_MAPPING = {
-    "rail": "passenger_train-route_type_national_rail-fuel_source_na",
-    "train": "passenger_train-route_type_national_rail-fuel_source_na",
-    "underground": "passenger_train-route_type_underground-fuel_source_na",
-    "tube": "passenger_train-route_type_underground-fuel_source_na",
-    "metro": "passenger_train-route_type_light_rail_and_tram-fuel_source_na",
-    "bus": "passenger_vehicle-vehicle_type_local_bus-fuel_source_na-distance_na-engine_size_na",
-    "coach": "passenger_vehicle-vehicle_type_coach-fuel_source_na-distance_na-engine_size_na",
-}
-
-
 @router.get("/example")
 def get_example():
     """Returns a static example message."""
@@ -252,15 +239,17 @@ def api_put_transport_activity_mapping(payload: dict = Body(...)):
         if "mapping" in payload and isinstance(payload.get("mapping"), dict):
             mapping = payload["mapping"]
 
+        allowed_modes = {"underground", "tube", "metro", "train", "rail", "bus", "coach"}
+
         cleaned: dict[str, str] = {}
         for k, v in mapping.items():
             if not isinstance(k, str):
                 raise HTTPException(status_code=400, detail="mapping keys must be strings")
             key = k.strip().lower()
-            if key not in ALLOWED_TRANSPORT_MODES:
+            if key not in allowed_modes:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Invalid mode '{k}'. Allowed: {sorted(ALLOWED_TRANSPORT_MODES)}",
+                    detail=f"Invalid mode '{k}'. Allowed: {sorted(allowed_modes)}",
                 )
             if not isinstance(v, str) or not v.strip():
                 raise HTTPException(status_code=400, detail=f"activity_id for '{k}' must be a non-empty string")
@@ -272,24 +261,6 @@ def api_put_transport_activity_mapping(payload: dict = Body(...)):
         raise
     except Exception:
         logging.exception("Failed to update transport activity mapping")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/transport-activity-mapping/seed-defaults")
-def api_seed_transport_activity_mapping(force: bool = Query(False, description="Overwrite existing mapping if present")):
-    """Seed the transport activity mapping with sensible defaults.
-
-    This is a convenience endpoint for first-time setup; you can always update
-    mappings manually via PUT.
-    """
-    try:
-        existing = get_transport_activity_mapping()
-        if existing and not force:
-            return existing
-        save_transport_activity_mapping(DEFAULT_TRANSPORT_ACTIVITY_MAPPING)
-        return get_transport_activity_mapping()
-    except Exception:
-        logging.exception("Failed to seed transport activity mapping")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
