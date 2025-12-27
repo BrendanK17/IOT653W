@@ -19,25 +19,7 @@ SEARCH_URL = "https://api.climatiq.io/data/v1/search"
 ESTIMATE_URL = "https://api.climatiq.io/data/v1/estimate"
 
 # MongoDB integration
-from .mongodb import save_climatiq_response, get_latest_climatiq_response, save_activity_ids, get_activity_ids
-
-
-def save_gb_activity_ids():
-    """Save the pre-given activity IDs for GB."""
-    activity_ids = [
-        "passenger_vehicle-vehicle_type_local_bus-fuel_source_na-distance_na-engine_size_na",
-        "passenger_train-route_type_international_rail-fuel_source_na",
-        "passenger_train-route_type_light_rail_and_tram-fuel_source_na",
-        "passenger_train-route_type_national_rail-fuel_source_na",
-        "passenger_train-route_type_underground-fuel_source_na",
-        "passenger_vehicle-vehicle_type_black_cab-fuel_source_na-distance_na-engine_size_na",
-        "passenger_vehicle-vehicle_type_coach-fuel_source_na-distance_na-engine_size_na",
-        "passenger_vehicle-vehicle_type_local_bus_not_london-fuel_source_na-distance_na-engine_size_na",
-        "passenger_vehicle-vehicle_type_taxi-fuel_source_na-distance_na-engine_size_na"
-    ]
-    # Store activity entries with explicit region to ensure correct region strings
-    entries = [{"activity_id": a, "region": "GB"} for a in activity_ids]
-    save_activity_ids("GB", entries)
+from .mongodb import save_climatiq_response, get_latest_climatiq_response
 
 
 def search_emission_factors(mode_of_transport: str, region: str, lca_activity: str = "well_to_tank"):

@@ -87,26 +87,21 @@ def query_climatiq(
 
         results = []
         for entry in activity_entries:
-            # entry may be a string (activity_id) or an object {activity_id, region}
+            # New schema: list[str]. Kept backward-compatible with older stored shapes.
             if isinstance(entry, dict):
                 activity_id = entry.get("activity_id")
-                activity_region = entry.get("region")
             else:
                 activity_id = entry
-                activity_region = None
 
             if not activity_id or not isinstance(activity_id, str):
                 logging.warning("Skipping invalid activity entry: %r", entry)
                 continue
 
+            activity_region = region
+
             # Special-case: underground activity should use GB region
             if activity_id == "passenger_train-route_type_underground-fuel_source_na":
                 activity_region = "GB"
-
-            # Require a stored region to proceed
-            if not activity_region or not isinstance(activity_region, str):
-                logging.warning("Skipping activity_id %s because no valid region specified in stored entry", activity_id)
-                continue
 
             activities_to_query = ["well_to_tank", "fuel_combustion"]
             activities_to_query = list(dict.fromkeys(activities_to_query))
@@ -148,6 +143,49 @@ def query_climatiq(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+@router.get("/climatiq/ids")
+def api_get_climatiq_activity_ids(
+    location: str = Query("GB", description="Location key (e.g., GB)")
+):
+    """Return saved Climatiq activity IDs for a location.
+
+    Response is a plain JSON array of activity_id strings.
+    """
+    try:
+        return get_activity_ids(location)
+    except Exception:
+        logging.exception("Failed to get climatiq activity ids")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.put("/climatiq/ids")
+def api_put_climatiq_activity_ids(
+    activity_ids: list[str] = Body(...),
+    location: str = Query("GB", description="Location key (e.g., GB)"),
+):
+    """Replace saved Climatiq activity IDs for a location.
+
+    Body must be a JSON array of activity_id strings.
+    """
+    try:
+        cleaned: list[str] = []
+        for it in activity_ids or []:
+            if not isinstance(it, str) or not it.strip():
+                raise HTTPException(status_code=400, detail="All activity_ids must be non-empty strings")
+            cleaned.append(it.strip())
+
+        # Deduplicate while preserving order
+        cleaned = list(dict.fromkeys(cleaned))
+
+        save_activity_ids(location, cleaned)
+        return {"message": "Climatiq activity ids updated", "count": len(cleaned)}
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Failed to update climatiq activity ids")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
 @router.get("/climatiq/search")
 def climatiq_search(
     mode_of_transport: str = Query("national rail", description="Mode of transport"),
@@ -183,19 +221,6 @@ def climatiq_estimate(
         logging.exception("Unexpected error in climatiq_estimate")
         raise HTTPException(status_code=500, detail="Internal server error")
         # Special-case: underground activity should use GB regardless of stored region
-
-
-@router.get("/climatiq/ids")
-def climatiq_ids(
-    location: str = Query("GB", description="Location code"),
-):
-    """Get activity IDs for a location."""
-    try:
-        activity_ids = get_activity_ids(location)
-        return {"location": location, "activity_ids": activity_ids}
-    except Exception:
-        logging.exception("Unexpected error in climatiq_ids")
-        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/climatiq/responses")
@@ -261,20 +286,6 @@ def api_put_transport_activity_mapping(payload: dict = Body(...)):
         raise
     except Exception:
         logging.exception("Failed to update transport activity mapping")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/climatiq/ids")
-def update_climatiq_ids(
-    location: str = Query(..., description="Location code"),
-    activity_ids: list[str] = Body(..., description="List of activity IDs"),
-):
-    """Update activity IDs for a location."""
-    try:
-        save_activity_ids(location, activity_ids)
-        return {"message": f"Activity IDs updated for {location}", "count": len(activity_ids)}
-    except Exception:
-        logging.exception("Failed to update activity IDs")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

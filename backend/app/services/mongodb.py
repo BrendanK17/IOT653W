@@ -43,17 +43,22 @@ def save_activity_ids(location: str, activity_ids: list):
     """
     db = client[DB_NAME]
     collection = db[CLIMATIQ_IDS_COLLECTION]
-    # Normalize stored format to list of objects: {"activity_id": ..., "region": ...}
-    normalized = []
-    for item in activity_ids:
+    # Store as a plain list of activity_id strings.
+    normalized: list[str] = []
+    for item in activity_ids or []:
+        if isinstance(item, str):
+            if item.strip():
+                normalized.append(item.strip())
+            continue
+
+        # Backward-compatible: accept old formats like {activity_id, region}
         if isinstance(item, dict):
-            # ensure keys exist
             aid = item.get("activity_id") or item.get("id") or item.get("activityId")
-            region = item.get("region")
-            normalized.append({"activity_id": aid, "region": region})
-        else:
-            # assume string activity id, leave region empty for now
-            normalized.append({"activity_id": item, "region": None})
+            if isinstance(aid, str) and aid.strip():
+                normalized.append(aid.strip())
+
+    # Deduplicate while preserving order
+    normalized = list(dict.fromkeys(normalized))
 
     # Upsert: update if exists, insert if not
     collection.update_one(
@@ -76,15 +81,20 @@ def get_activity_ids(location: str):
     doc = collection.find_one({"location": location})
     if not doc:
         return []
-    # Return as list of objects with activity_id and region
+    # Return as list[str]. Backward-compatible with old stored object format.
     items = doc.get("activity_ids", []) or []
-    normalized = []
+    normalized: list[str] = []
     for it in items:
+        if isinstance(it, str):
+            if it.strip():
+                normalized.append(it.strip())
+            continue
         if isinstance(it, dict):
-            normalized.append({"activity_id": it.get("activity_id"), "region": it.get("region")})
-        else:
-            normalized.append({"activity_id": it, "region": None})
-    return normalized
+            aid = it.get("activity_id") or it.get("id") or it.get("activityId")
+            if isinstance(aid, str) and aid.strip():
+                normalized.append(aid.strip())
+
+    return list(dict.fromkeys(normalized))
 
 
 def save_climatiq_response(query_params: dict, response: dict):
