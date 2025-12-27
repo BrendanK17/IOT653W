@@ -14,23 +14,6 @@ from app.services.transport_prompt import get_prompt as get_transport_prompt
 from app.services.airports import get_all_airports
 
 
-def _is_tool_call(obj: Any) -> bool:
-    """Return True if parsed JSON looks like a tool call request.
-
-    We accept several shapes for robustness. Typical expected shape is
-    {"tool": "tavily_search", "query": "...", "limit": 5}
-    """
-    if not isinstance(obj, dict):
-        return False
-    if obj.get("tool") is not None:
-        return True
-    if obj.get("action") in ("search", "tavily_search", "tool_call"):
-        return True
-    if obj.get("type") == "tool_call":
-        return True
-    return False
-
-
 def _is_final_array(obj: Any) -> bool:
     """Return True if the object is a final JSON array of transport entries."""
     if not isinstance(obj, list):
@@ -144,28 +127,23 @@ def _extract_first_json(text: str) -> Optional[Any]:
 
 
 def run_airport_lookup(
-    iata: str, model: str = "gpt-oss:120b", max_iters: int = 20
+    iata: str, model: str = "qwen3:480b-cloud", max_iters: int = 20
 ) -> List[Dict[str, Any]]:
     """Run the agent loop for an airport and return final transport list.
 
-    The agent operates in a loop where the LLM can emit ONE of TWO JSON responses:
+    The agent operates in a loop where the LLM must emit a JSON response:
 
-    1. TOOL CALL (Search Request):
-       {"action": "search", "queries": [{"id": "q1", "query": "...", "purpose": "..."}], "max_searches": N}
-       The agent executes Tavily searches and returns results as JSON feedback.
-
-    2. FINAL ANSWER (Transport Array):
+    FINAL ANSWER (Transport Array):
        [{"iata": "XXX", "id": "...", "airport": "...", "name": "...", "mode": "...", "co2": null, "stops": [...]}]
        The agent validates and returns this array.
 
-    The loop continues until the LLM emits a FINAL ANSWER array or max_iters is reached.
+    External tools are disabled; the LLM must produce the final JSON array directly.
     """
     prompt = get_transport_prompt()
 
-    # Add a strict JSON-only system instruction that explains the two response types.
+    # Add a strict JSON-only system instruction that explains the response type.
     strict_system = (
         "You MUST output ONLY valid JSON. Every response must be a top-level JSON array containing transport objects.\n"
-        "Do NOT emit any tool calls, search requests, or ask for external searches. The system will NOT execute external tools.\n"
         "Return the final JSON array directly using the schema provided in the prompt. Do NOT include any text, prose, markdown, or explanations. Only JSON."
     )
 
@@ -174,94 +152,6 @@ def run_airport_lookup(
         {"role": "system", "content": prompt},
         {"role": "user", "content": f"Airport: {iata.upper()}"},
     ]
-
-    def _summarize_result(res: Any, top_n: int = 3) -> List[Dict[str, Any]]:
-        """Return a compact summary list of top results from a tavily response.
-
-        Each summary item contains: title, url, score, snippet (short preview).
-        """
-        out: List[Dict[str, Any]] = []
-        try:
-            if not isinstance(res, dict):
-                return out
-            hits = []
-            for key in ("results", "items", "documents", "hits"):
-                if key in res and isinstance(res[key], list):
-                    hits = res[key]
-                    break
-            if not hits and isinstance(res, list):
-                hits = res
-            for item in hits[:top_n]:
-                try:
-                    title = (
-                        item.get("title")
-                        or item.get("headline")
-                        or item.get("name")
-                        or ""
-                    )
-                    url = item.get("url") or item.get("link") or ""
-                    score = item.get("score") if item.get("score") is not None else None
-                    content = (
-                        item.get("content")
-                        or item.get("snippet")
-                        or item.get("raw_content")
-                        or ""
-                    )
-                    snippet = (
-                        (content[:300] + "...")
-                        if isinstance(content, str) and len(content) > 300
-                        else content
-                    )
-                    out.append(
-                        {"title": title, "url": url, "score": score, "snippet": snippet}
-                    )
-                except Exception:
-                    continue
-        except Exception:
-            return out
-        return out
-
-    def _normalize_query(iata_code: str, raw_query: str) -> str:
-        """Normalize queries to put city first and request a full list of stops.
-
-        - If airport info is available in DB, prepend the city name.
-        - Ensure the phrasing requests a full list of stops with coordinates and official fares.
-        """
-        q = (raw_query or "").strip()
-        try:
-            # Try to look up airport city from DB for nicer queries
-            city = None
-            try:
-                docs = get_all_airports()
-                for d in docs:
-                    iata = d.get("iata") if isinstance(d, dict) else None
-                    if iata and iata.upper() == iata_code.upper():
-                        city = d.get("city") or d.get("name")
-                        break
-            except Exception:
-                city = None
-
-            if city:
-                # If city not already at start, prepend it
-                if not q.lower().startswith(city.lower()):
-                    q = f"{city} {q}"
-
-            # If query doesn't already ask for a full stop list, append guidance
-            low = q.lower()
-            if not (
-                "full list" in low
-                or "all stops" in low
-                or "complete station" in low
-                or "full stops" in low
-            ):
-                q = q + " full list of stops with coordinates and official fares"
-        except Exception:
-            # Fallback: ensure basic guidance
-            if not q:
-                q = f"{iata_code} airport full list of stops with coordinates and official fares"
-            elif "full list" not in q.lower():
-                q = q + " full list of stops with coordinates and official fares"
-        return q
 
     # NOTE: External tool calls (Tavily) are intentionally disabled for the
     # main agent flow. The model must produce the final JSON array directly
@@ -275,22 +165,6 @@ def run_airport_lookup(
             "content": (
                 "You have been given external search summaries and results in the conversation under the keys `search_summary` and `search_results`. "
                 "NOTE: external search tools are disabled in this run; ignore any instructions to call external tools. Do NOT invent additional stops or pricing beyond what is reasonable. If information is missing, set fields to null."
-            ),
-        }
-    )
-
-    # Add an explicit user instruction to search first
-    messages.append(
-        {
-            "role": "user",
-            "content": (
-                f"For airport {iata.upper()}, you MUST first search for current information. "
-                "Do NOT use your training data. Make tool calls to find:"
-                "1. ALL transport modes (rail, underground, bus, coach)"
-                "2. COMPLETE station lists for each route (all stops from airport to city center)"
-                "3. Current official fares and pricing"
-                "4. Accurate coordinates for all stations."
-                "Start by emitting a search request JSON."
             ),
         }
     )
@@ -383,7 +257,7 @@ def run_airport_lookup(
                     {
                         "role": "user",
                         "content": (
-                            "Please respond with either a tool-call JSON or a final JSON array. "
+                            "Please respond with a final JSON array. "
                             "Return only JSON. Do not include prose."
                         ),
                     }
@@ -395,8 +269,7 @@ def run_airport_lookup(
                         "role": "user",
                         "content": (
                             "You must now ONLY respond with valid JSON. "
-                            'If you want me to run searches, reply with: {"tool": "tavily_search", "queries": [{"id": "q1", "query": "..."}]}. '
-                            'If you can answer directly, return a top-level JSON array like: [{"iata": "LHR", "name": "Heathrow", ... }].'
+                            'Return a top-level JSON array like: [{"iata": "LHR", "name": "Heathrow", ... }].'
                         ),
                     }
                 )
@@ -421,32 +294,7 @@ def run_airport_lookup(
                 )
             return parsed
 
-        # If the model emits a tool call, we do not execute external tools in
-        # the main flow. Tell the model tools are disabled and ask it to
-        # return the final JSON array directly.
-        if _is_tool_call(parsed):
-            logging.info(
-                "Model requested a tool call on iteration %d, but external tools are disabled. Parsed: %s",
-                iteration,
-                json.dumps(parsed, indent=2),
-            )
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": json.dumps(
-                        {"error": "tool_calls_disabled", "received": parsed}
-                    ),
-                }
-            )
-            messages.append(
-                {
-                    "role": "user",
-                    "content": "External search tools are disabled. Please return the FINAL JSON array of transports using only the prompt and your knowledge.",
-                }
-            )
-            continue
-
-        # Unknown JSON shape: ask LLM to clarify / produce either tool call or final array
+        # Unknown JSON shape: ask LLM to clarify / produce final array
         logging.warning(
             "LLM returned unknown JSON shape on iteration %d: %s",
             iteration,
@@ -462,7 +310,7 @@ def run_airport_lookup(
         messages.append(
             {
                 "role": "user",
-                "content": 'Please produce either a tool-call JSON (e.g. {"tool": "tavily_search", "query": "..."}) or a final JSON array of transports.',
+                "content": 'Please produce a final JSON array of transports.',
             }
         )
 
