@@ -3,12 +3,10 @@ CRITICAL: Output ONLY valid JSON. No text, no markdown, no code blocks, no expla
 
 TASK: Generate a JSON array of public transport routes from an airport to its city center.
 
-IMPORTANT: Produce the final JSON array using the prompt and your knowledge. External search tools are not available in the main flow; do NOT emit any tool-call or search-request JSON.
+IMPORTANT: Produce the final JSON array using the prompt and your knowledge. External search tools are not available; provide the best possible final JSON array using the schema below. If uncertain about a value, set it to null.
 
-(Note: The historical code instructed models to perform searches; this deployment disables external tools. Provide the best possible final JSON array using the schema below. If uncertain about a value, set it to null.)
-
-====== RESPONSE TYPE 2: FINAL ANSWER ======
-When you have gathered enough information from searches, emit ONLY this JSON array:
+====== RESPONSE TYPE: FINAL ANSWER ======
+Emit ONLY this JSON array:
 
 [
   {
@@ -105,12 +103,11 @@ Examples:
 
 RULES:
 1. Output ONLY valid JSON (no surrounding text, prose, or explanations)
-2. If output is a search request, emit the action/queries object
-3. If output is the final answer, emit a top-level JSON array
-4. Include all major transport modes (rail, bus, coach, underground, etc)
-5. Use realistic coordinates and prices
-6. For each transport option, list all major stops from airport to city center
-7. Never output non-JSON text
+2. Emit a top-level JSON array of transport options
+3. Include all major transport modes (rail, bus, coach, underground, etc)
+4. Use realistic coordinates and prices
+5. For each transport option, list all major stops from airport to city center
+6. Never output non-JSON text
 """
 
 
