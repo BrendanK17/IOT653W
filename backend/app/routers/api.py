@@ -1,8 +1,9 @@
-from app.services.climatiq import get_emission_factors
+from app.services.climatiq import estimate_emission_factors, save_climatiq_response, search_emission_factors
 from fastapi import APIRouter, HTTPException, Query, Body
 from fastapi.responses import PlainTextResponse
 from app.services.ollama import ask_ollama
 import logging
+import os
 from fastapi import HTTPException
 from app.services.airports import (
     get_all_airports,
@@ -12,10 +13,12 @@ from app.services.airports import (
     log_prompt,
 )
 from app.services.airport_prompt import get_prompt
+from app.services.city_center_prompt import get_prompt as get_city_center_prompt
 from app.services.airport_transports import (
     get_transports_for_airport,
     replace_transports_for_airport,
     log_prompt as transport_log_prompt,
+    enrich_transports_co2_for_airport,
 )
 from app.services.airport_agent import run_airport_lookup
 import json
@@ -35,9 +38,32 @@ from app.services.city_fares import (
     generate_fare_summary_for_city,
     log_fare_summary_prompt,
 )
-from app.services.mongodb import get_activity_ids, save_activity_ids
+from app.services.mongodb import (
+    get_activity_ids,
+    save_activity_ids,
+    get_country_regions,
+    save_country_regions,
+    get_country_region,
+    get_all_climatiq_responses,
+    get_transport_activity_mapping,
+    save_transport_activity_mapping,
+)
+from app.services.mongodb import save_airport_distance, get_airport_distance
 
 router = APIRouter(tags=["Example"])
+
+
+ALLOWED_TRANSPORT_MODES = {"underground", "tube", "metro", "train", "rail", "bus", "coach"}
+
+DEFAULT_TRANSPORT_ACTIVITY_MAPPING = {
+    "rail": "passenger_train-route_type_national_rail-fuel_source_na",
+    "train": "passenger_train-route_type_national_rail-fuel_source_na",
+    "underground": "passenger_train-route_type_underground-fuel_source_na",
+    "tube": "passenger_train-route_type_underground-fuel_source_na",
+    "metro": "passenger_train-route_type_light_rail_and_tram-fuel_source_na",
+    "bus": "passenger_vehicle-vehicle_type_local_bus-fuel_source_na-distance_na-engine_size_na",
+    "coach": "passenger_vehicle-vehicle_type_coach-fuel_source_na-distance_na-engine_size_na",
+}
 
 
 @router.get("/example")
@@ -62,18 +88,74 @@ def query_ollama(
 
 @router.get("/climatiq")
 def query_climatiq(
-    mode_of_transport: str = Query("national rail", description="Mode of transport"),
     region: str = Query("GB", description="Region code"),
-    source_lca_activity: str = Query(
-        "well_to_tank", description="Source LCA activity"
-    ),
     passengers: int = Query(4, description="Number of passengers"),
     distance: int = Query(100, description="Distance in km"),
 ):
-    """Query Climatiq for emission factors (combined search and estimate)."""
+    """Query Climatiq for emission factors using saved activity IDs for the region."""
     try:
-        result = get_emission_factors(mode_of_transport, region, source_lca_activity, passengers, distance)
-        return {"result": result}
+        activity_entries = get_activity_ids(region)
+        if not activity_entries:
+            raise ValueError(f"No activity IDs found for region {region}")
+
+        results = []
+        for entry in activity_entries:
+            # entry may be a string (activity_id) or an object {activity_id, region}
+            if isinstance(entry, dict):
+                activity_id = entry.get("activity_id")
+                activity_region = entry.get("region")
+            else:
+                activity_id = entry
+                activity_region = None
+
+            if not activity_id or not isinstance(activity_id, str):
+                logging.warning("Skipping invalid activity entry: %r", entry)
+                continue
+
+            # Special-case: underground activity should use GB region
+            if activity_id == "passenger_train-route_type_underground-fuel_source_na":
+                activity_region = "GB"
+
+            # Require a stored region to proceed
+            if not activity_region or not isinstance(activity_region, str):
+                logging.warning("Skipping activity_id %s because no valid region specified in stored entry", activity_id)
+                continue
+
+            activities_to_query = ["well_to_tank", "fuel_combustion"]
+            activities_to_query = list(dict.fromkeys(activities_to_query))
+            for activity in activities_to_query:
+                try:
+                    result = estimate_emission_factors(activity_id, activity_region, activity, passengers, distance)
+                    results.append({"activity_id": activity_id, "region": activity_region, "source_lca_activity": activity, "result": result})
+
+                    params = {
+                        "activity_id": activity_id,
+                        "region": activity_region,
+                        "source_lca_activity": activity,
+                        "passengers": passengers,
+                        "distance": distance,
+                        "distance_unit": "km",
+                    }
+                    try:
+                        from app.services.mongodb import save_climatiq_estimate
+
+                        est_params = {
+                            "activity_id": activity_id,
+                            "region": activity_region,
+                            "source": "UK Government (BEIS, DEFRA, DESNZ)",
+                            "source_lca_activity": activity,
+                            "passengers": passengers,
+                            "distance": distance,
+                            "distance_unit": "km",
+                        }
+                        save_climatiq_estimate(est_params, result)
+                    except Exception:
+                        save_climatiq_response(params, result)
+                except Exception as e:
+                    logging.warning(f"Failed to estimate for activity_id {activity_id} activity {activity} region {activity_region}: {e}")
+                    continue
+        
+        return {"results": results}
     except Exception:
         logging.exception("Unexpected error in query_climatiq")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -113,6 +195,7 @@ def climatiq_estimate(
     except Exception:
         logging.exception("Unexpected error in climatiq_estimate")
         raise HTTPException(status_code=500, detail="Internal server error")
+        # Special-case: underground activity should use GB regardless of stored region
 
 
 @router.get("/climatiq/ids")
@@ -125,6 +208,88 @@ def climatiq_ids(
         return {"location": location, "activity_ids": activity_ids}
     except Exception:
         logging.exception("Unexpected error in climatiq_ids")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/climatiq/responses")
+def climatiq_responses():
+    """Return all stored Climatiq responses from MongoDB."""
+    try:
+        docs = get_all_climatiq_responses()
+        return {"responses": docs, "count": len(docs)}
+    except Exception:
+        logging.exception("Failed to fetch climatiq responses")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/transport-activity-mapping")
+def api_get_transport_activity_mapping():
+    """Return the configured mapping of transport `mode` -> Climatiq `activity_id`.
+
+    Response is the mapping object itself (a JSON dictionary).
+    """
+    try:
+        mapping = get_transport_activity_mapping()
+        return mapping
+    except Exception:
+        logging.exception("Failed to get transport activity mapping")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.put("/transport-activity-mapping")
+def api_put_transport_activity_mapping(payload: dict = Body(...)):
+    """Update the mapping of transport `mode` -> Climatiq `activity_id`.
+
+    `mapping` must be an object whose keys are one of:
+    underground, tube, metro, train, rail, bus, coach.
+    """
+    try:
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="mapping must be an object")
+
+        # Allow either raw mapping object, or {"mapping": {...}}
+        mapping = payload
+        if "mapping" in payload and isinstance(payload.get("mapping"), dict):
+            mapping = payload["mapping"]
+
+        cleaned: dict[str, str] = {}
+        for k, v in mapping.items():
+            if not isinstance(k, str):
+                raise HTTPException(status_code=400, detail="mapping keys must be strings")
+            key = k.strip().lower()
+            if key not in ALLOWED_TRANSPORT_MODES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid mode '{k}'. Allowed: {sorted(ALLOWED_TRANSPORT_MODES)}",
+                )
+            if not isinstance(v, str) or not v.strip():
+                raise HTTPException(status_code=400, detail=f"activity_id for '{k}' must be a non-empty string")
+            cleaned[key] = v.strip()
+
+        save_transport_activity_mapping(cleaned)
+        return {"message": "Transport activity mapping updated", "count": len(cleaned)}
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Failed to update transport activity mapping")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/transport-activity-mapping/seed-defaults")
+def api_seed_transport_activity_mapping(force: bool = Query(False, description="Overwrite existing mapping if present")):
+    """Seed the transport activity mapping with sensible defaults.
+
+    This is a convenience endpoint for first-time setup; you can always update
+    mappings manually via PUT.
+    """
+    try:
+        existing = get_transport_activity_mapping()
+        if existing and not force:
+            return existing
+        save_transport_activity_mapping(DEFAULT_TRANSPORT_ACTIVITY_MAPPING)
+        return get_transport_activity_mapping()
+    except Exception:
+        logging.exception("Failed to seed transport activity mapping")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -168,6 +333,23 @@ def api_get_airport_country(iata: str):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+@router.get("/airports/{iata}/coords")
+def api_get_airport_coords(iata: str):
+    """Return latitude and longitude for a given IATA airport code."""
+    try:
+        airport = get_airport_by_iata(iata.upper())
+        if not airport:
+            raise HTTPException(status_code=404, detail="Airport not found")
+        lat = airport.get("lat")
+        lon = airport.get("lon")
+        return {"lat": lat, "lon": lon}
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Failed to get airport coords from DB")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
 @router.post("/airports/update")
 def api_update_airports(country: str = "ALL"):
     """Update airports for a given country (ISO code) or ALL using the stored Ollama prompt.
@@ -204,6 +386,9 @@ def api_update_airports(country: str = "ALL"):
             lat_val = item.get("lat")
             lon_val = item.get("lon")
 
+            city_lat_val = item.get("city_lat")
+            city_lon_val = item.get("city_lon")
+
             lat = None
             lon = None
 
@@ -219,6 +404,20 @@ def api_update_airports(country: str = "ALL"):
                 except (TypeError, ValueError):
                     lon = None
 
+            city_lat = None
+            city_lon = None
+            if city_lat_val is not None:
+                try:
+                    city_lat = float(city_lat_val)
+                except (TypeError, ValueError):
+                    city_lat = None
+
+            if city_lon_val is not None:
+                try:
+                    city_lon = float(city_lon_val)
+                except (TypeError, ValueError):
+                    city_lon = None
+
             cleaned.append(
                 {
                     "iata": item.get("iata"),
@@ -227,9 +426,30 @@ def api_update_airports(country: str = "ALL"):
                     "country": item.get("country"),
                     "lat": lat,
                     "lon": lon,
+                    "city_lat": city_lat,
+                    "city_lon": city_lon,
                     "aliases": item.get("aliases") or [],
                 }
             )
+        # Strict validation: ensure each item has exactly the required keys
+        required_keys = {"iata", "name", "city", "country", "lat", "lon", "city_lat", "city_lon", "aliases"}
+        invalid_items = []
+        for idx, c in enumerate(cleaned):
+            if not isinstance(c, dict):
+                invalid_items.append((idx, "not an object"))
+                continue
+            keys = set(c.keys())
+            if keys != required_keys:
+                # allow missing keys or extra keys to be reported
+                missing = required_keys - keys
+                extra = keys - required_keys
+                invalid_items.append((idx, {"missing": list(missing), "extra": list(extra)}))
+
+        if invalid_items:
+            logging.error("LLM response failed validation; not saving. Details: %s", invalid_items)
+            logging.error("LLM response text: %s", response_text)
+            raise HTTPException(status_code=500, detail=f"LLM response failed validation for {len(invalid_items)} items; check logs for details")
+
         # save for country or ALL
         if country.upper() == "ALL":
             replace_all_airports(cleaned)
@@ -245,9 +465,96 @@ def api_update_airports(country: str = "ALL"):
         logging.exception("Unexpected error updating airports")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+@router.post("/airports/{iata}/distance")
+def api_compute_and_save_distance(iata: str):
+    """Compute distance (km) between airport and city centre, save to MongoDB mapping, return rounded km as plain text."""
+    try:
+        airport = get_airport_by_iata(iata.upper())
+        if not airport:
+            raise HTTPException(status_code=404, detail="Airport not found")
+
+        a_lat = airport.get("lat")
+        a_lon = airport.get("lon")
+        city = airport.get("city")
+        country = airport.get("country")
+
+        if a_lat is None or a_lon is None:
+            raise HTTPException(status_code=400, detail="Airport coordinates not available")
+        if not city:
+            raise HTTPException(status_code=400, detail="Airport city not available")
+
+        prompt = get_city_center_prompt()
+        messages = [{"role": "user", "content": prompt + f"\nCity: {city}\nCountry: {country or ''}"}]
+        try:
+            resp_text = ask_ollama("gpt-oss:120b", messages)
+        except Exception:
+            logging.exception("Ollama request failed for city centre lookup")
+            raise HTTPException(status_code=500, detail="LLM request failed")
+
+        try:
+            obj = json.loads(resp_text)
+            if not isinstance(obj, dict):
+                raise ValueError("Expected JSON object from LLM")
+            c_lat = obj.get("lat")
+            c_lon = obj.get("lon")
+            if c_lat is None or c_lon is None:
+                raise ValueError("City centre coordinates missing or null")
+            c_lat = float(c_lat)
+            c_lon = float(c_lon)
+        except Exception:
+            logging.exception("Failed to parse city centre coords from LLM response: %s", resp_text)
+            raise HTTPException(status_code=500, detail="Failed to parse city coordinates from LLM response")
+
+        # compute haversine in km
+        from math import radians, sin, cos, atan2, sqrt
+
+        R = 6371.0
+        lat1 = radians(float(a_lat))
+        lon1 = radians(float(a_lon))
+        lat2 = radians(c_lat)
+        lon2 = radians(c_lon)
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        km = R * c
+
+        # save to DB (km as float)
+        try:
+            save_airport_distance(iata.upper(), float(km))
+        except Exception:
+            logging.exception("Failed to save airport distance for %s", iata)
+            raise HTTPException(status_code=500, detail="Failed to save distance")
+
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse(content=str(int(round(km))))
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Unexpected error computing/saving distance for %s", iata)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/airports/{iata}/distance")
+def api_get_saved_distance(iata: str):
+    """Retrieve saved distance (km) for an IATA code and return as rounded integer plain text."""
+    try:
+        val = get_airport_distance(iata.upper())
+        if val is None:
+            # attempt to compute and save the distance, then return result
+            return api_compute_and_save_distance(iata)
+
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse(content=str(int(round(float(val)))))
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Failed to retrieve saved distance for %s", iata)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 
 @router.get("/airports/{iata}/transports")
-def api_get_transports(iata: str):
+def api_get_transports(iata: str, passengers: int = Query(1, description="Number of passengers")):
     """Return transport options for a specific airport.
 
     If transports are not present in the database, call the LLM prompt on-demand,
@@ -309,6 +616,34 @@ def api_update_transports(iata: str):
         return {"message": "Transports updated", "count": len(cleaned)}
     except Exception:
         logging.exception("Unexpected error updating transports for %s", iata)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/airports/{iata}/transports/enrich-co2")
+def api_enrich_transports_co2(
+    iata: str,
+    passengers: int = Query(1, description="Number of passengers"),
+    distance_km: int | None = Query(
+        None,
+        description="Override distance in km (defaults to saved airport-city distance, else inferred from stops)",
+    ),
+    region: str | None = Query(
+        None,
+        description="Optional region string to match stored Climatiq query_params.region (falls back to any region if not found)",
+    ),
+    force: bool = Query(False, description="Overwrite existing co2 field if already populated"),
+):
+    """Populate `co2` for stored transport options using previously saved Climatiq responses."""
+    try:
+        return enrich_transports_co2_for_airport(
+            iata=iata,
+            passengers=passengers,
+            distance_km=distance_km,
+            region=region,
+            force=force,
+        )
+    except Exception:
+        logging.exception("Failed to enrich transports co2 for %s", iata)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -404,3 +739,25 @@ def tavily_test(
     except Exception as e:
         logging.exception("Tavily test failed")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/country-regions")
+def get_all_country_regions():
+    """Get all country to region mappings."""
+    return get_country_regions()
+
+
+@router.get("/country-regions/{country}")
+def get_region_for_country(country: str):
+    """Get the region for a specific country."""
+    region = get_country_region(country)
+    if region is None:
+        raise HTTPException(status_code=404, detail="Country not found")
+    return PlainTextResponse(region)
+
+
+@router.put("/country-regions")
+def update_country_regions(regions: dict = Body(...)):
+    """Update the country to region mappings."""
+    save_country_regions(regions)
+    return {"message": "Country regions updated successfully"}

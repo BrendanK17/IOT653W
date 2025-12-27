@@ -86,7 +86,11 @@ Final Answer Schema:
   - id: unique identifier (string)
   - airport: airport name (string)
   - name: transport service name (string)
-  - mode: transport mode (rail/bus/coach/taxi/underground etc)
+  - mode: transport mode
+    - IMPORTANT: choose ONE of these existing categories whenever applicable:
+      "underground", "tube", "metro", "train", "rail", "bus", "coach"
+    - Do NOT invent new categories. Only use a different mode value if it is
+      definitely not one of the above.
   - co2: always null
   - stops: array of stop objects, each with:
     - stop_name: station/stop name (string)

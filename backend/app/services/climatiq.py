@@ -35,7 +35,9 @@ def save_gb_activity_ids():
         "passenger_vehicle-vehicle_type_local_bus_not_london-fuel_source_na-distance_na-engine_size_na",
         "passenger_vehicle-vehicle_type_taxi-fuel_source_na-distance_na-engine_size_na"
     ]
-    save_activity_ids("GB", activity_ids)
+    # Store activity entries with explicit region to ensure correct region strings
+    entries = [{"activity_id": a, "region": "GB"} for a in activity_ids]
+    save_activity_ids("GB", entries)
 
 
 def search_emission_factors(mode_of_transport: str, region: str, lca_activity: str = "well_to_tank"):
@@ -43,7 +45,7 @@ def search_emission_factors(mode_of_transport: str, region: str, lca_activity: s
     params = {
         "query": mode_of_transport.replace("_", " "),
         "data_version": "27",
-        "source": "BEIS",
+        #"source": "UK Government (BEIS, DEFRA, DESNZ)",
         "sector": "Transport",
         "year": 2025
     }
@@ -89,11 +91,12 @@ def search_emission_factors(mode_of_transport: str, region: str, lca_activity: s
 
 def estimate_emission_factors(activity_id: str, region: str, lca_activity: str = "well_to_tank", passengers: int = 4, distance: int = 100):
     """Estimate emissions for a given activity_id."""
+    #if activity_id == "passenger_train-route_type_underground-fuel_source_na":
+    activity_region = "GB"
     estimate_payload = {
         "emission_factor": {
             "activity_id": activity_id,
-            "source": "BEIS",
-            "region": region,
+            #"region": region,
             "year": 2025,  # Assuming year, or could be parameter
             "source_lca_activity": lca_activity,
             "data_version": "^29"
@@ -125,7 +128,7 @@ def get_emission_factors(
 ):
     """Combined search and estimate for backward compatibility."""
     latest = search_emission_factors(mode_of_transport, region, lca_activity)
-    estimate_data = estimate_emission_factors(latest["activity_id"], region, lca_activity, passengers, distance)
+    estimate_data = estimate_emission_factors(latest["activity_id"], region, lca_activity, passengers, distance, source=latest.get("source", "BEIS"))
 
     # Prepare output (combine metadata and estimate)
     output = {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { LoginForm, RegisterForm } from './components/auth/AuthForms';
 import { HomePage } from './components/layout/HomePage';
 import { NewInsightsPage } from './components/InsightsPage';
@@ -176,6 +176,7 @@ const getAirportNameFromCode = (code: string, airportOptionsList?: AirportOption
 // Wrapper component for TransfersPage that reads URL params
 const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; airports: AirportOption[] }) => {
   const { airportCode } = useParams<{ airportCode: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
   const airportName = getAirportNameFromCode(airportCode || '', airports);
@@ -192,8 +193,9 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
         return;
       }
       const code = airportCode.toUpperCase();
+      const passengers = searchParams.get('passengers') || '1';
       try {
-        const res = await fetch(`${API_BASE}/airports/${code}/transports`);
+        const res = await fetch(`${API_BASE}/airports/${code}/transports?passengers=${passengers}`);
         if (!res.ok) {
           if (mounted) setTransportOptionsState([]);
           return;
@@ -224,7 +226,7 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
     };
     load();
     return () => { mounted = false; };
-  }, [airportCode, airports]);
+  }, [airportCode, airports, searchParams]);
 
   const transportOptions = transportOptionsState;
 
@@ -647,10 +649,10 @@ function App() {
                   isLoggedIn={userState.isLoggedIn}
                   searchQuery={appState.searchQuery}
                   onSearchChange={(query) => setAppState(prev => ({ ...prev, searchQuery: query }))}
-                  onSearch={() => {
+                  onSearch={(passengers) => {
                     const code = (appState as unknown as { selectedAirportCode?: string }).selectedAirportCode || extractAirportCode(appState.selectedAirport || appState.searchQuery);
                     if (code) {
-                      navigate(`/${code.toLowerCase()}`);
+                      navigate(`/${code.toLowerCase()}?passengers=${passengers}`);
                     }
                   }}
                   selectedAirport={appState.selectedAirport}
