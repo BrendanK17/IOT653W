@@ -8,6 +8,9 @@ def test_fallback_to_mongodb_when_climatiq_api_error(monkeypatch):
     query_params = {
         "query": "train",
         "data_version": "27",
+        "source": "BEIS",
+        "sector": "Transport",
+        "year": 2025,
         "region": "GB",
         "lca_activity": "well_to_tank",
     }

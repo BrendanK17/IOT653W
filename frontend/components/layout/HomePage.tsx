@@ -7,12 +7,13 @@ import { SearchBox, AirportDropdown, SearchButton } from '../search/SearchCompon
 import { ViewType } from '../../types';
 import type { AirportOption } from '../search/SearchComponents';
 import { AccountPage } from '../AccountPage';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface HomePageProps {
   isLoggedIn: boolean;
   searchQuery: string;
   onSearchChange: (value: string) => void;
-  onSearch: () => void;
+  onSearch: (passengers: number) => void;
   selectedAirport: string;
   showDropdown: boolean;
   onShowDropdown: (show: boolean) => void;
@@ -39,6 +40,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 }) => {
   const [currentView, setCurrentView] = useState<ViewType>('home');
   const [defaultAirport, setDefaultAirport] = useState('');
+  const [passengers, setPassengers] = useState(1);
 
   if (currentView === 'account') {
     return (
@@ -112,9 +114,28 @@ export const HomePage: React.FC<HomePageProps> = ({
               />
             </div>
 
+            <div className="flex items-center space-x-2">
+              <label htmlFor="passengers" className="text-sm font-medium text-gray-700">Passengers:</label>
+              <Select value={passengers.toString()} onValueChange={(value) => setPassengers(parseInt(value))}>
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="6">6</SelectItem>
+                  <SelectItem value="7">7</SelectItem>
+                  <SelectItem value="8">8</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <SearchButton
               disabled={!selectedAirport && !searchQuery}
-              onClick={onSearch}
+              onClick={() => onSearch(passengers)}
               className="w-full"
             />
           </div>

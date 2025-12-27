@@ -9,7 +9,7 @@ load_dotenv()
 TESTING = os.getenv("TESTING", "0").lower() in ("1", "true", "yes")
 
 CLIMATIQ_API_KEY = os.getenv("CLIMATIQ_API_KEY")
-if not CLIMATIQ_API_KEY and not TESTING:
+if not CLIMATIQ_API_KEY:
     raise ValueError("CLIMATIQ_API_KEY is not set")
 
 # If testing, leave headers empty so requests can be patched/mocked in tests.
@@ -22,40 +22,31 @@ ESTIMATE_URL = "https://api.climatiq.io/data/v1/estimate"
 from .mongodb import save_climatiq_response, get_latest_climatiq_response
 
 
-def get_emission_factors(
-    mode_of_transport: str, region: str, lca_activity: str = "well_to_tank"
-):
-
-    # -----------------------------
-    # 1) SEARCH
-    # -----------------------------
-    params = {"query": mode_of_transport.replace("_", " "), "data_version": "27"}
+def search_emission_factors(mode_of_transport: str, region: str, lca_activity: str = "well_to_tank"):
+    """Search for emission factors and return the latest matching activity metadata."""
+    params = {
+        "query": mode_of_transport.replace("_", " "),
+        "data_version": "27",
+        #"source": "UK Government (BEIS, DEFRA, DESNZ)",
+        "sector": "Transport",
+        "year": 2025
+    }
     try:
         resp = requests.get(SEARCH_URL, params=params, headers=HEADERS)
-        print(f"[Climatiq] Request URL: {resp.url}")
-        print(f"[Climatiq] Response status: {resp.status_code}")
+        print(f"[Climatiq] Search Request URL: {resp.url}")
+        print(f"[Climatiq] Search Response status: {resp.status_code}")
         if not resp.ok:
-            print(f"[Climatiq] Response text: {resp.text}")
+            print(f"[Climatiq] Search Response text: {resp.text}")
             resp.raise_for_status()
         results = resp.json().get("results", [])
         print("🔍 RAW SEARCH RESULTS:\n", json.dumps(results, indent=2))
         if not results:
             raise ValueError(f"No search results for {mode_of_transport}")
         else:
-            print("✅ Climatiq API returned a response!")
+            print("✅ Climatiq search returned a response!")
     except requests.HTTPError as e:
-        print(f"[Climatiq] HTTPError: {e}")
-        print("[Climatiq] Falling back to MongoDB cache.")
-        # Add region and lca_activity to params for cache lookup
-        cache_params = params.copy()
-        cache_params["region"] = region
-        cache_params["lca_activity"] = lca_activity
-        cached = get_latest_climatiq_response(cache_params)
-        if cached:
-            print("[MongoDB] Returning cached response.")
-            return cached
-        else:
-            raise ValueError(f"Climatiq API error and no cached result found: {e}")
+        print(f"[Climatiq] Search HTTPError: {e}")
+        raise ValueError(f"Climatiq search error: {e}")
 
     # Filter results for region and lca_activity
     filtered = [
@@ -77,7 +68,49 @@ def get_emission_factors(
             f"No matching emission factors found for {mode_of_transport} in region {region}"
         )
 
-    # Prepare output
+    return latest
+
+
+def estimate_emission_factors(activity_id: str, region: str, lca_activity: str = "well_to_tank", passengers: int = 4, distance: int = 100):
+    """Estimate emissions for a given activity_id."""
+    estimate_payload = {
+        "emission_factor": {
+            "activity_id": activity_id,
+            #"region": region,
+            "year": 2025,  # Assuming year, or could be parameter
+            "source_lca_activity": lca_activity,
+            "data_version": "^29"
+        },
+        "parameters": {
+            "passengers": passengers,
+            "distance": distance,
+            "distance_unit": "km"
+        }
+    }
+    try:
+        est_resp = requests.post(ESTIMATE_URL, json=estimate_payload, headers=HEADERS)
+        print(f"[Climatiq] Estimate Request: {estimate_payload}")
+        print(f"[Climatiq] Estimate Response status: {est_resp.status_code}")
+        if not est_resp.ok:
+            print(f"[Climatiq] Estimate Response text: {est_resp.text}")
+            est_resp.raise_for_status()
+        estimate_data = est_resp.json()
+        print("🔍 RAW ESTIMATE RESULTS:\n", json.dumps(estimate_data, indent=2))
+    except requests.HTTPError as e:
+        print(f"[Climatiq] Estimate HTTPError: {e}")
+        raise ValueError(f"Climatiq estimate error: {e}")
+
+    return estimate_data
+
+
+def get_emission_factors(
+    mode_of_transport: str, region: str, lca_activity: str = "well_to_tank", passengers: int = 4, distance: int = 100
+):
+    """Combined search and estimate for backward compatibility."""
+    latest = search_emission_factors(mode_of_transport, region, lca_activity)
+    estimate_data = estimate_emission_factors(latest["activity_id"], region, lca_activity, passengers, distance, source=latest.get("source", "BEIS"))
+
+    # Prepare output (combine metadata and estimate)
     output = {
         "activity_id": latest.get("activity_id"),
         "name": latest.get("name"),
@@ -98,10 +131,42 @@ def get_emission_factors(
         "data_quality_flags": latest.get("data_quality_flags"),
         "uncertainty": latest.get("uncertainty"),
         "access_type": latest.get("access_type"),
+        # Include estimate results
+        "estimate_co2e": estimate_data.get("co2e"),
+        "estimate_co2e_unit": estimate_data.get("co2e_unit"),
+        "estimate_constituent_gases": estimate_data.get("constituent_gases"),
+        "estimate_co2e_calculation_method": estimate_data.get("co2e_calculation_method"),
     }
     # Save to MongoDB for future fallback
-    mongo_params = params.copy()
-    mongo_params["region"] = region
-    mongo_params["lca_activity"] = lca_activity
-    save_climatiq_response(mongo_params, output)
+    params = {
+        "query": mode_of_transport.replace("_", " "),
+        "data_version": "27",
+        "source": "BEIS",
+        "sector": "Transport",
+        "year": 2025,
+        "region": region,
+        "lca_activity": lca_activity
+    }
+    save_climatiq_response(params, output)
     return output
+
+
+def get_specific_activities():
+    # Updated: Test with a single activity_id and lca_activity for simplicity
+    activity_ids = [
+        "passenger_vehicle-vehicle_type_coach-fuel_source_na-distance_na-engine_size_na"  # Single test activity
+    ]
+    queries = {
+        "passenger_vehicle-vehicle_type_coach-fuel_source_na-distance_na-engine_size_na": "coach"
+    }
+    region = "GB"
+    results = {region: []}
+    for activity_id in activity_ids:
+        mode = queries.get(activity_id, activity_id.replace("_", " "))
+        for lca in ["well_to_tank"]:  # Single LCA for testing
+            try:
+                data = get_emission_factors(mode, region, lca)
+                results[region].append(data)
+            except ValueError as e:
+                print(f"Error for {activity_id} {lca}: {e}")
+    return results
