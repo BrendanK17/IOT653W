@@ -6,9 +6,11 @@ import requests
 
 def test_fallback_to_mongodb_when_climatiq_api_error(monkeypatch):
     # Mock mongodb functions
-    with patch('app.services.climatiq.save_climatiq_response'), \
-         patch('app.services.climatiq.get_latest_climatiq_response', return_value={"activity_id": "mock_id", "name": "Mock Name"}):
-        
+    with patch("app.services.climatiq.save_climatiq_response"), patch(
+        "app.services.climatiq.get_latest_climatiq_response",
+        return_value={"activity_id": "mock_id", "name": "Mock Name"},
+    ):
+
         # Prepare test query params and expected MongoDB response
         query_params = {
             "query": "train",

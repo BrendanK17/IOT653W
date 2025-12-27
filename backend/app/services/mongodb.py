@@ -12,7 +12,9 @@ if not TESTING and not MONGODB_CONNECTION_STRING:
 
 # Create a real MongoDB client and verify connection
 if not TESTING:
-    client: MongoClient = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
+    client: MongoClient = MongoClient(
+        MONGODB_CONNECTION_STRING, server_api=ServerApi("1")
+    )
     try:
         client.admin.command("ping")
         print("Pinged your deployment. You successfully connected to MongoDB!")

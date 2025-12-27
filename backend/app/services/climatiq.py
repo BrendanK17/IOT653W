@@ -133,7 +133,7 @@ def get_emission_factors(
             "lca_activity": lca_activity,
         }
         return get_latest_climatiq_response(query_params)
-    
+
     estimate_data = estimate_emission_factors(
         latest["activity_id"],
         region,
