@@ -10,7 +10,7 @@ load_dotenv()
 TESTING = os.getenv("TESTING", "0").lower() in ("1", "true", "yes")
 
 CLIMATIQ_API_KEY = os.getenv("CLIMATIQ_API_KEY")
-if not CLIMATIQ_API_KEY:
+if not TESTING and not CLIMATIQ_API_KEY:
     raise ValueError("CLIMATIQ_API_KEY is not set")
 
 # If testing, leave headers empty so requests can be patched/mocked in tests.
