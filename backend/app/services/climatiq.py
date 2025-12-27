@@ -73,8 +73,6 @@ def search_emission_factors(mode_of_transport: str, region: str, lca_activity: s
 
 def estimate_emission_factors(activity_id: str, region: str, lca_activity: str = "well_to_tank", passengers: int = 4, distance: int = 100):
     """Estimate emissions for a given activity_id."""
-    #if activity_id == "passenger_train-route_type_underground-fuel_source_na":
-    activity_region = "GB"
     estimate_payload = {
         "emission_factor": {
             "activity_id": activity_id,
