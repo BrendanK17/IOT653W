@@ -44,7 +44,10 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     R = 6371.0
     dlat = radians(lat2 - lat1)
     dlon = radians(lon2 - lon1)
-    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+    a = (
+        sin(dlat / 2) ** 2
+        + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+    )
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return R * c
 
@@ -58,16 +61,24 @@ def _infer_distance_km_from_stops(doc: Dict[str, Any]) -> Optional[int]:
     if not first or not last:
         return None
     try:
-        lat1 = float(first.get("lat"))
-        lon1 = float(first.get("lon"))
-        lat2 = float(last.get("lat"))
-        lon2 = float(last.get("lon"))
+        lat1_val = first.get("lat")
+        lon1_val = first.get("lon")
+        lat2_val = last.get("lat")
+        lon2_val = last.get("lon")
+        if lat1_val is None or lon1_val is None or lat2_val is None or lon2_val is None:
+            return None
+        lat1 = float(lat1_val)
+        lon1 = float(lon1_val)
+        lat2 = float(lat2_val)
+        lon2 = float(lon2_val)
     except Exception:
         return None
     return int(round(_haversine_km(lat1, lon1, lat2, lon2)))
 
 
-def _map_transport_to_activity_id(doc: Dict[str, Any], mapping: Dict[str, str]) -> Optional[str]:
+def _map_transport_to_activity_id(
+    doc: Dict[str, Any], mapping: Dict[str, str]
+) -> Optional[str]:
     """Map transport `mode` to a Climatiq activity_id using the configured MongoDB mapping.
 
     No heuristics: if it doesn't match, it must be manually mapped.
@@ -76,6 +87,7 @@ def _map_transport_to_activity_id(doc: Dict[str, Any], mapping: Dict[str, str]) 
     if not mode:
         return None
     return mapping.get(mode)
+
 
 def _build_co2_block_from_climatiq_doc(doc: Dict[str, Any]) -> Dict[str, Any]:
     resp = doc.get("response") if isinstance(doc, dict) else None
@@ -191,7 +203,14 @@ def enrich_transports_co2_for_airport(
         )
 
         if not wtt_doc and not fc_doc:
-            missing.append({"id": transport_id, "reason": "no_climatiq_match", "activity_id": act_id, "distance": dk})
+            missing.append(
+                {
+                    "id": transport_id,
+                    "reason": "no_climatiq_match",
+                    "activity_id": act_id,
+                    "distance": dk,
+                }
+            )
             continue
 
         wtt_block = _build_co2_block_from_climatiq_doc(wtt_doc) if wtt_doc else None

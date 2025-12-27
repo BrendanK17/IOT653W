@@ -1,4 +1,8 @@
-from app.services.climatiq import estimate_emission_factors, save_climatiq_response, search_emission_factors
+from app.services.climatiq import (
+    estimate_emission_factors,
+    save_climatiq_response,
+    search_emission_factors,
+)
 from fastapi import APIRouter, HTTPException, Query, Body
 from fastapi.responses import PlainTextResponse
 from app.services.ollama import ask_ollama
@@ -49,6 +53,8 @@ from app.services.mongodb import (
     save_transport_activity_mapping,
 )
 from app.services.mongodb import save_airport_distance, get_airport_distance
+from math import radians, sin, cos, atan2, sqrt
+from app.services.mongodb import save_climatiq_response
 
 router = APIRouter(tags=["Example"])
 
@@ -107,8 +113,17 @@ def query_climatiq(
             activities_to_query = list(dict.fromkeys(activities_to_query))
             for activity in activities_to_query:
                 try:
-                    result = estimate_emission_factors(activity_id, activity_region, activity, passengers, distance)
-                    results.append({"activity_id": activity_id, "region": activity_region, "source_lca_activity": activity, "result": result})
+                    result = estimate_emission_factors(
+                        activity_id, activity_region, activity, passengers, distance
+                    )
+                    results.append(
+                        {
+                            "activity_id": activity_id,
+                            "region": activity_region,
+                            "source_lca_activity": activity,
+                            "result": result,
+                        }
+                    )
 
                     params = {
                         "activity_id": activity_id,
@@ -119,8 +134,6 @@ def query_climatiq(
                         "distance_unit": "km",
                     }
                     try:
-                        from app.services.mongodb import save_climatiq_estimate
-
                         est_params = {
                             "activity_id": activity_id,
                             "region": activity_region,
@@ -130,13 +143,15 @@ def query_climatiq(
                             "distance": distance,
                             "distance_unit": "km",
                         }
-                        save_climatiq_estimate(est_params, result)
+                        save_climatiq_response(est_params, result)
                     except Exception:
                         save_climatiq_response(params, result)
                 except Exception as e:
-                    logging.warning(f"Failed to estimate for activity_id {activity_id} activity {activity} region {activity_region}: {e}")
+                    logging.warning(
+                        f"Failed to estimate for activity_id {activity_id} activity {activity} region {activity_region}: {e}"
+                    )
                     continue
-        
+
         return {"results": results}
     except Exception:
         logging.exception("Unexpected error in query_climatiq")
@@ -171,7 +186,9 @@ def api_put_climatiq_activity_ids(
         cleaned: list[str] = []
         for it in activity_ids or []:
             if not isinstance(it, str) or not it.strip():
-                raise HTTPException(status_code=400, detail="All activity_ids must be non-empty strings")
+                raise HTTPException(
+                    status_code=400, detail="All activity_ids must be non-empty strings"
+                )
             cleaned.append(it.strip())
 
         # Deduplicate while preserving order
@@ -190,9 +207,7 @@ def api_put_climatiq_activity_ids(
 def climatiq_search(
     mode_of_transport: str = Query("national rail", description="Mode of transport"),
     region: str = Query("GB", description="Region code"),
-    source_lca_activity: str = Query(
-        "well_to_tank", description="Source LCA activity"
-    ),
+    source_lca_activity: str = Query("well_to_tank", description="Source LCA activity"),
 ):
     """Search for Climatiq activity metadata."""
     try:
@@ -207,15 +222,15 @@ def climatiq_search(
 def climatiq_estimate(
     activity_id: str = Query(..., description="Activity ID from search"),
     region: str = Query("GB", description="Region code"),
-    source_lca_activity: str = Query(
-        "well_to_tank", description="Source LCA activity"
-    ),
+    source_lca_activity: str = Query("well_to_tank", description="Source LCA activity"),
     passengers: int = Query(4, description="Number of passengers"),
     distance: int = Query(100, description="Distance in km"),
 ):
     """Estimate emissions for a given activity ID."""
     try:
-        result = estimate_emission_factors(activity_id, region, source_lca_activity, passengers, distance)
+        result = estimate_emission_factors(
+            activity_id, region, source_lca_activity, passengers, distance
+        )
         return {"result": result}
     except Exception:
         logging.exception("Unexpected error in climatiq_estimate")
@@ -264,12 +279,22 @@ def api_put_transport_activity_mapping(payload: dict = Body(...)):
         if "mapping" in payload and isinstance(payload.get("mapping"), dict):
             mapping = payload["mapping"]
 
-        allowed_modes = {"underground", "tube", "metro", "train", "rail", "bus", "coach"}
+        allowed_modes = {
+            "underground",
+            "tube",
+            "metro",
+            "train",
+            "rail",
+            "bus",
+            "coach",
+        }
 
         cleaned: dict[str, str] = {}
         for k, v in mapping.items():
             if not isinstance(k, str):
-                raise HTTPException(status_code=400, detail="mapping keys must be strings")
+                raise HTTPException(
+                    status_code=400, detail="mapping keys must be strings"
+                )
             key = k.strip().lower()
             if key not in allowed_modes:
                 raise HTTPException(
@@ -277,7 +302,10 @@ def api_put_transport_activity_mapping(payload: dict = Body(...)):
                     detail=f"Invalid mode '{k}'. Allowed: {sorted(allowed_modes)}",
                 )
             if not isinstance(v, str) or not v.strip():
-                raise HTTPException(status_code=400, detail=f"activity_id for '{k}' must be a non-empty string")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"activity_id for '{k}' must be a non-empty string",
+                )
             cleaned[key] = v.strip()
 
         save_transport_activity_mapping(cleaned)
@@ -414,7 +442,17 @@ def api_update_airports(country: str = "ALL"):
                 }
             )
         # Strict validation: ensure each item has exactly the required keys
-        required_keys = {"iata", "name", "city", "country", "lat", "lon", "city_lat", "city_lon", "aliases"}
+        required_keys = {
+            "iata",
+            "name",
+            "city",
+            "country",
+            "lat",
+            "lon",
+            "city_lat",
+            "city_lon",
+            "aliases",
+        }
         invalid_items = []
         for idx, c in enumerate(cleaned):
             if not isinstance(c, dict):
@@ -425,12 +463,19 @@ def api_update_airports(country: str = "ALL"):
                 # allow missing keys or extra keys to be reported
                 missing = required_keys - keys
                 extra = keys - required_keys
-                invalid_items.append((idx, {"missing": list(missing), "extra": list(extra)}))
+                invalid_items.append(
+                    (idx, {"missing": list(missing), "extra": list(extra)})
+                )
 
         if invalid_items:
-            logging.error("LLM response failed validation; not saving. Details: %s", invalid_items)
+            logging.error(
+                "LLM response failed validation; not saving. Details: %s", invalid_items
+            )
             logging.error("LLM response text: %s", response_text)
-            raise HTTPException(status_code=500, detail=f"LLM response failed validation for {len(invalid_items)} items; check logs for details")
+            raise HTTPException(
+                status_code=500,
+                detail=f"LLM response failed validation for {len(invalid_items)} items; check logs for details",
+            )
 
         # save for country or ALL
         if country.upper() == "ALL":
@@ -447,6 +492,7 @@ def api_update_airports(country: str = "ALL"):
         logging.exception("Unexpected error updating airports")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+
 @router.post("/airports/{iata}/distance")
 def api_compute_and_save_distance(iata: str):
     """Compute distance (km) between airport and city centre, save to MongoDB mapping, return rounded km as plain text."""
@@ -461,12 +507,19 @@ def api_compute_and_save_distance(iata: str):
         country = airport.get("country")
 
         if a_lat is None or a_lon is None:
-            raise HTTPException(status_code=400, detail="Airport coordinates not available")
+            raise HTTPException(
+                status_code=400, detail="Airport coordinates not available"
+            )
         if not city:
             raise HTTPException(status_code=400, detail="Airport city not available")
 
         prompt = get_city_center_prompt()
-        messages = [{"role": "user", "content": prompt + f"\nCity: {city}\nCountry: {country or ''}"}]
+        messages = [
+            {
+                "role": "user",
+                "content": prompt + f"\nCity: {city}\nCountry: {country or ''}",
+            }
+        ]
         try:
             resp_text = ask_ollama("gpt-oss:120b", messages)
         except Exception:
@@ -484,12 +537,15 @@ def api_compute_and_save_distance(iata: str):
             c_lat = float(c_lat)
             c_lon = float(c_lon)
         except Exception:
-            logging.exception("Failed to parse city centre coords from LLM response: %s", resp_text)
-            raise HTTPException(status_code=500, detail="Failed to parse city coordinates from LLM response")
+            logging.exception(
+                "Failed to parse city centre coords from LLM response: %s", resp_text
+            )
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to parse city coordinates from LLM response",
+            )
 
         # compute haversine in km
-        from math import radians, sin, cos, atan2, sqrt
-
         R = 6371.0
         lat1 = radians(float(a_lat))
         lon1 = radians(float(a_lon))
@@ -508,7 +564,6 @@ def api_compute_and_save_distance(iata: str):
             logging.exception("Failed to save airport distance for %s", iata)
             raise HTTPException(status_code=500, detail="Failed to save distance")
 
-        from fastapi.responses import PlainTextResponse
         return PlainTextResponse(content=str(int(round(km))))
     except HTTPException:
         raise
@@ -526,7 +581,6 @@ def api_get_saved_distance(iata: str):
             # attempt to compute and save the distance, then return result
             return api_compute_and_save_distance(iata)
 
-        from fastapi.responses import PlainTextResponse
         return PlainTextResponse(content=str(int(round(float(val)))))
     except HTTPException:
         raise
@@ -536,7 +590,9 @@ def api_get_saved_distance(iata: str):
 
 
 @router.get("/airports/{iata}/transports")
-def api_get_transports(iata: str, passengers: int = Query(1, description="Number of passengers")):
+def api_get_transports(
+    iata: str, passengers: int = Query(1, description="Number of passengers")
+):
     """Return transport options for a specific airport.
 
     If transports are not present in the database, call the LLM prompt on-demand,
@@ -613,7 +669,9 @@ def api_enrich_transports_co2(
         None,
         description="Optional region string to match stored Climatiq query_params.region (falls back to any region if not found)",
     ),
-    force: bool = Query(False, description="Overwrite existing co2 field if already populated"),
+    force: bool = Query(
+        False, description="Overwrite existing co2 field if already populated"
+    ),
 ):
     """Populate `co2` for stored transport options using previously saved Climatiq responses."""
     try:
