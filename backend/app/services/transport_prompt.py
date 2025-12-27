@@ -3,12 +3,12 @@ CRITICAL: Output ONLY valid JSON. No text, no markdown, no code blocks, no expla
 
 TASK: Generate a JSON array of public transport routes from an airport to its city center.
 
-IMPORTANT: You have access to web_search and web_fetch tools. Use them to gather accurate information about public transport routes from airports to city centers. When you need information, emit tool calls. Once you have enough information, output ONLY valid JSON.
+IMPORTANT: You have access to web_search and web_fetch tools. Use them to gather accurate information about ALL public transport routes from the airport to its city center, including underground, train, bus, coach, and other modes. Search for all major transport options first, then get detailed stop lists for each. When you need information, emit tool calls. Once you have enough information for all modes, output ONLY valid JSON.
 
 (Note: External search tools are available. Use web_search and web_fetch to get accurate, up-to-date information. If uncertain about a value, use the tools to verify.)
 
 ====== RESPONSE TYPE 2: FINAL ANSWER ======
-When you have gathered enough information from searches, emit ONLY this JSON array:
+When you have gathered enough information from searches, emit ONLY this JSON array with MULTIPLE transport objects, one for each major mode:
 
 [
   {

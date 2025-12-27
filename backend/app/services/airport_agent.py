@@ -145,7 +145,7 @@ def _extract_first_json(text: str) -> Optional[Any]:
 
 
 def run_airport_lookup(
-    iata: str, model: str = "gpt-oss:120b", max_iters: int = 20
+    iata: str, model: str = "gpt-oss:120b-cloud", max_iters: int = 20
 ) -> List[Dict[str, Any]]:
     """Run the agent loop for an airport and return final transport list.
 
@@ -156,10 +156,12 @@ def run_airport_lookup(
 
     # System instruction that allows tool calls
     system_instruction = (
-        "You are an expert assistant that can use web search tools to gather accurate information about public transport routes from airports to city centers.\n"
+        "You are an expert assistant that can use web search tools to gather accurate information about ALL public transport routes from airports to city centers, including multiple modes like underground, train, bus, coach, etc.\n"
         "You have access to web_search and web_fetch tools.\n"
-        "When you need information, emit tool calls in the format expected by the system.\n"
-        "Once you have enough information, output ONLY a valid JSON array of transport objects.\n"
+        "First, search for all major transport options from the airport to city center.\n"
+        "Then, for each mode, gather detailed stop lists with coordinates and prices.\n"
+        "Emit tool calls as needed.\n"
+        "Once you have complete information for all modes, output ONLY a valid JSON array containing multiple transport objects.\n"
         "Do not include any text, prose, markdown, or explanations outside of JSON."
     )
 

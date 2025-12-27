@@ -47,7 +47,7 @@ def generate_fare_summary_for_city(city: str) -> Dict[str, Any]:
     prompt = get_fare_summary_prompt().format(city=city)
     messages = [{"role": "user", "content": prompt}]
     try:
-        response_text = ask_ollama("gpt-oss:120b", messages)
+        response_text = ask_ollama("gpt-oss:120b-cloud", messages)
         # Parse the JSON response
         import json
 

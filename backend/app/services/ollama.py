@@ -21,7 +21,7 @@ else:
     if not OLLAMA_API_KEY:
         raise ValueError("OLLAMA_API_KEY is not set")
     client = Client(
-        host="https://ollama.com", headers={"Authorization": "Bearer " + OLLAMA_API_KEY}
+        host="https://ollama.com/api", headers={"Authorization": "Bearer " + OLLAMA_API_KEY}
     )
 
 messages = [

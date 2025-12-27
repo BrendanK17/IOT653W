@@ -73,7 +73,7 @@ def query_ollama(
     """Query the Ollama LLM with a user prompt."""
     messages = [{"role": "user", "content": prompt}]
     try:
-        response = ask_ollama("gpt-oss:120b", messages)
+        response = ask_ollama("gpt-oss:120b-cloud", messages)
         return {"response": response}
     except Exception as e:
         logging.exception("Error querying Ollama")
@@ -376,7 +376,7 @@ def api_update_airports(country: str = "ALL"):
     prompt = get_prompt()
     messages = [{"role": "user", "content": prompt + f"\nCountry: {country}"}]
     try:
-        response_text = ask_ollama("gpt-oss:120b", messages)
+        response_text = ask_ollama("gpt-oss:120b-cloud", messages)
     except Exception as e:
         logging.exception("Ollama query failed")
         raise HTTPException(status_code=500, detail="LLM request failed")
@@ -529,7 +529,7 @@ def api_compute_and_save_distance(iata: str):
             }
         ]
         try:
-            resp_text = ask_ollama("gpt-oss:120b", messages)
+            resp_text = ask_ollama("gpt-oss:120b-cloud", messages)
         except Exception:
             logging.exception("Ollama request failed for city centre lookup")
             raise HTTPException(status_code=500, detail="LLM request failed")
