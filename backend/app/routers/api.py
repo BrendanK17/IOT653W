@@ -8,6 +8,7 @@ from fastapi.responses import PlainTextResponse
 from app.services.ollama import ask_ollama
 import logging
 import os
+from app.utils import sanitize_string, validate_iata, validate_city
 from fastapi import HTTPException
 from app.services.airports import (
     get_all_airports,
@@ -332,10 +333,13 @@ def api_get_airports():
 def api_get_airport_country(iata: str):
     """Return the country for a given IATA airport code."""
     try:
+        iata = validate_iata(iata)
         airport = get_airport_by_iata(iata.upper())
         if not airport:
             raise HTTPException(status_code=404, detail="Airport not found")
         return PlainTextResponse(content=airport.get("country"))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception:
@@ -347,12 +351,15 @@ def api_get_airport_country(iata: str):
 def api_get_airport_coords(iata: str):
     """Return latitude and longitude for a given IATA airport code."""
     try:
+        iata = validate_iata(iata)
         airport = get_airport_by_iata(iata.upper())
         if not airport:
             raise HTTPException(status_code=404, detail="Airport not found")
         lat = airport.get("lat")
         lon = airport.get("lon")
         return {"lat": lat, "lon": lon}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception:
@@ -497,6 +504,7 @@ def api_update_airports(country: str = "ALL"):
 def api_compute_and_save_distance(iata: str):
     """Compute distance (km) between airport and city centre, save to MongoDB mapping, return rounded km as plain text."""
     try:
+        iata = validate_iata(iata)
         airport = get_airport_by_iata(iata.upper())
         if not airport:
             raise HTTPException(status_code=404, detail="Airport not found")
@@ -576,12 +584,15 @@ def api_compute_and_save_distance(iata: str):
 def api_get_saved_distance(iata: str):
     """Retrieve saved distance (km) for an IATA code and return as rounded integer plain text."""
     try:
+        iata = validate_iata(iata)
         val = get_airport_distance(iata.upper())
         if val is None:
             # attempt to compute and save the distance, then return result
             return api_compute_and_save_distance(iata)
 
         return PlainTextResponse(content=str(int(round(float(val)))))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception:
@@ -599,6 +610,9 @@ def api_get_transports(
     store the results, and return them.
     """
     try:
+        iata = validate_iata(iata)
+        if passengers < 1 or passengers > 10:
+            raise HTTPException(status_code=400, detail="Passengers must be between 1 and 10")
         docs = get_transports_for_airport(iata)
         if docs:
             return {"transports": docs}
@@ -618,6 +632,8 @@ def api_get_transports(
             raise HTTPException(status_code=500, detail="Failed to save transports")
 
         return {"transports": cleaned}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         logging.exception("Failed to get transports from DB")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -626,6 +642,10 @@ def api_get_transports(
 @router.post("/airports/{iata}/transports/update")
 def api_update_transports(iata: str):
     """Force update transports for a specific airport by calling the LLM and saving results."""
+    try:
+        iata = validate_iata(iata)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     logging.info("=== UPDATE TRANSPORTS ENDPOINT CALLED ===")
     logging.info("Airport IATA: %s", iata)
 
@@ -675,6 +695,9 @@ def api_enrich_transports_co2(
 ):
     """Populate `co2` for stored transport options using previously saved Climatiq responses."""
     try:
+        iata = validate_iata(iata)
+        if passengers < 1 or passengers > 10:
+            raise HTTPException(status_code=400, detail="Passengers must be between 1 and 10")
         return enrich_transports_co2_for_airport(
             iata=iata,
             passengers=passengers,
@@ -682,6 +705,8 @@ def api_enrich_transports_co2(
             region=region,
             force=force,
         )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         logging.exception("Failed to enrich transports co2 for %s", iata)
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -695,6 +720,7 @@ def api_get_city_fares(city: str):
     store the results, and return them.
     """
     try:
+        city = validate_city(city)
         summary = get_fare_summary_for_city(city)
         if summary:
             return {"city": city, "fare_summary": summary}
@@ -724,6 +750,10 @@ def api_get_city_fares(city: str):
 @router.post("/cities/{city}/fares/update")
 def api_update_city_fares(city: str):
     """Force update the fare summary for a specific city by calling the LLM and saving results."""
+    try:
+        city = validate_city(city)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     logging.info("=== UPDATE CITY FARES ENDPOINT CALLED ===")
     logging.info("City: %s", city)
 

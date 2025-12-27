@@ -51,7 +51,7 @@ export const refreshAccessToken = async (): Promise<string | null> => {
 };
 
 export const apiFetch = async (path: string, options: RequestInit = {}) => {
-  const headers: Record<string, string> = { ...(options.headers as Record<string, string> || {}), 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = { ...(options.headers as Record<string, string> || {}), 'Content-Type': 'application/json', 'X-Requested-By': 'GroundScanner-Frontend' };
   const token = localStorage.getItem('access_token');
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
