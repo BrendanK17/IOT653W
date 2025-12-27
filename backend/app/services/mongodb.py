@@ -1,20 +1,26 @@
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import os
+from unittest.mock import MagicMock
 
 # Environment flags
+TESTING = os.getenv("TESTING", "0").lower() in ("1", "true", "yes")
 MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
 
-if not MONGODB_CONNECTION_STRING:
+if not TESTING and not MONGODB_CONNECTION_STRING:
     raise ValueError("MONGODB_CONNECTION_STRING is not set")
 
 # Create a real MongoDB client and verify connection
-client: MongoClient = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
-try:
-    client.admin.command("ping")
-    print("Pinged your deployment. You successfully connected to MongoDB!")
-except Exception as e:
-    print(e)
+if not TESTING:
+    client: MongoClient = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
+    try:
+        client.admin.command("ping")
+        print("Pinged your deployment. You successfully connected to MongoDB!")
+    except Exception as e:
+        print(e)
+else:
+    # In testing, use a mock client
+    client = MagicMock()
 
 
 # --- Climatiq Response Collection ---

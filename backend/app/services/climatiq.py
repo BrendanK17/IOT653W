@@ -119,7 +119,21 @@ def get_emission_factors(
     distance: int = 100,
 ):
     """Combined search and estimate for backward compatibility."""
-    latest = search_emission_factors(mode_of_transport, region, lca_activity)
+    try:
+        latest = search_emission_factors(mode_of_transport, region, lca_activity)
+    except ValueError:
+        # Fallback to MongoDB
+        query_params = {
+            "query": mode_of_transport.replace("_", " "),
+            "data_version": "27",
+            "source": "BEIS",
+            "sector": "Transport",
+            "year": 2025,
+            "region": region,
+            "lca_activity": lca_activity,
+        }
+        return get_latest_climatiq_response(query_params)
+    
     estimate_data = estimate_emission_factors(
         latest["activity_id"],
         region,

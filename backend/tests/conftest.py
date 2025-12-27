@@ -1,5 +1,9 @@
 from pathlib import Path
 import sys
+import os
+
+# Set testing environment
+os.environ["TESTING"] = "1"
 
 # Ensure the `backend` directory (project package root) is on sys.path so tests
 # can import `app` regardless of the current working directory or how pytest
