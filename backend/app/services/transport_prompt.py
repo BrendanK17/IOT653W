@@ -3,9 +3,9 @@ CRITICAL: Output ONLY valid JSON. No text, no markdown, no code blocks, no expla
 
 TASK: Generate a JSON array of public transport routes from an airport to its city center.
 
-IMPORTANT: Produce the final JSON array using the prompt and your knowledge. External search tools are not available in the main flow; do NOT emit any tool-call or search-request JSON.
+IMPORTANT: You have access to web_search and web_fetch tools. Use them to gather accurate information about public transport routes from airports to city centers. When you need information, emit tool calls. Once you have enough information, output ONLY valid JSON.
 
-(Note: The historical code instructed models to perform searches; this deployment disables external tools. Provide the best possible final JSON array using the schema below. If uncertain about a value, set it to null.)
+(Note: External search tools are available. Use web_search and web_fetch to get accurate, up-to-date information. If uncertain about a value, use the tools to verify.)
 
 ====== RESPONSE TYPE 2: FINAL ANSWER ======
 When you have gathered enough information from searches, emit ONLY this JSON array:

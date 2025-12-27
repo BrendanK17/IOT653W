@@ -2,6 +2,9 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import os
 from unittest.mock import MagicMock
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Environment flags
 TESTING = os.getenv("TESTING", "0").lower() in ("1", "true", "yes")

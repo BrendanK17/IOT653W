@@ -1,5 +1,5 @@
 import os
-from ollama import Client
+from ollama import Client, chat, web_search, web_fetch
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -41,4 +41,23 @@ def ask_ollama(model: str, messages: list):
     response = ""
     for part in client.chat(model, messages=messages, stream=True):
         response += part["message"]["content"]
+    return response
+
+
+def ask_ollama_with_tools(model: str, messages: list, tools=None, think=False):
+    """Send a chat request to Ollama with tools and return the response."""
+    if TESTING:
+        # Return a mock response for testing
+        return {"message": {"content": "Mock response for testing purposes", "tool_calls": None}}
+
+    available_tools = {'web_search': web_search, 'web_fetch': web_fetch}
+    if tools:
+        available_tools.update({tool.__name__: tool for tool in tools if hasattr(tool, '__name__')})
+
+    response = chat(
+        model=model,
+        messages=messages,
+        tools=[web_search, web_fetch] if tools is None else tools,
+        think=think
+    )
     return response
