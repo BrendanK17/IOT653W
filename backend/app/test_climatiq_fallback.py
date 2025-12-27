@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import patch
 from app.services import climatiq, mongodb
+import requests
 
 
 def test_fallback_to_mongodb_when_climatiq_api_error(monkeypatch):
@@ -27,8 +28,6 @@ def test_fallback_to_mongodb_when_climatiq_api_error(monkeypatch):
         url = "http://mocked.url"
 
         def raise_for_status(self):
-            import requests
-
             raise requests.HTTPError("Mocked HTTP error")
 
         def json(self):

@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import api
 from app.routers import auth as auth_router
+from fastapi import Response
+from app.routers import auth as auth_module
+from app.auth import schemas as auth_schemas
 
 app = FastAPI(title="GroundScanner Backend")
 

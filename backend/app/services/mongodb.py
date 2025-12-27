@@ -9,7 +9,7 @@ if not MONGODB_CONNECTION_STRING:
     raise ValueError("MONGODB_CONNECTION_STRING is not set")
 
 # Create a real MongoDB client and verify connection
-client = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
+client: MongoClient = MongoClient(MONGODB_CONNECTION_STRING, server_api=ServerApi("1"))
 try:
     client.admin.command("ping")
     print("Pinged your deployment. You successfully connected to MongoDB!")
@@ -62,9 +62,7 @@ def save_activity_ids(location: str, activity_ids: list):
 
     # Upsert: update if exists, insert if not
     collection.update_one(
-        {"location": location},
-        {"$set": {"activity_ids": normalized}},
-        upsert=True
+        {"location": location}, {"$set": {"activity_ids": normalized}}, upsert=True
     )
 
 
@@ -208,7 +206,9 @@ def save_country_regions(regions: dict):
     """
     db = client[DB_NAME]
     collection = db[COUNTRY_REGIONS_COLLECTION]
-    collection.replace_one({"_id": "regions"}, {"_id": "regions", **regions}, upsert=True)
+    collection.replace_one(
+        {"_id": "regions"}, {"_id": "regions", **regions}, upsert=True
+    )
 
 
 def get_country_region(country: str):
@@ -232,7 +232,9 @@ def save_airport_distance(iata: str, distance_km: float):
     db = client[DB_NAME]
     collection = db[AIRPORT_DISTANCE_COLLECTION]
     key = f"distances.{iata.upper()}"
-    collection.update_one({"_id": "distances"}, {"$set": {key: float(distance_km)}}, upsert=True)
+    collection.update_one(
+        {"_id": "distances"}, {"$set": {key: float(distance_km)}}, upsert=True
+    )
 
 
 def get_airport_distance(iata: str):

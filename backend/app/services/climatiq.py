@@ -2,6 +2,7 @@ import os
 import requests
 from dotenv import load_dotenv
 import json
+from .mongodb import save_climatiq_response, get_latest_climatiq_response
 
 load_dotenv()
 
@@ -18,18 +19,17 @@ HEADERS = {"Authorization": f"Bearer {CLIMATIQ_API_KEY}"} if CLIMATIQ_API_KEY el
 SEARCH_URL = "https://api.climatiq.io/data/v1/search"
 ESTIMATE_URL = "https://api.climatiq.io/data/v1/estimate"
 
-# MongoDB integration
-from .mongodb import save_climatiq_response, get_latest_climatiq_response
 
-
-def search_emission_factors(mode_of_transport: str, region: str, lca_activity: str = "well_to_tank"):
+def search_emission_factors(
+    mode_of_transport: str, region: str, lca_activity: str = "well_to_tank"
+):
     """Search for emission factors and return the latest matching activity metadata."""
-    params = {
+    params: dict[str, str | int] = {
         "query": mode_of_transport.replace("_", " "),
         "data_version": "27",
-        #"source": "UK Government (BEIS, DEFRA, DESNZ)",
+        # "source": "UK Government (BEIS, DEFRA, DESNZ)",
         "sector": "Transport",
-        "year": 2025
+        "year": 2025,
     }
     try:
         resp = requests.get(SEARCH_URL, params=params, headers=HEADERS)
@@ -71,21 +71,29 @@ def search_emission_factors(mode_of_transport: str, region: str, lca_activity: s
     return latest
 
 
-def estimate_emission_factors(activity_id: str, region: str, lca_activity: str = "well_to_tank", passengers: int = 4, distance: int = 100):
+def estimate_emission_factors(
+    activity_id: str,
+    region: str,
+    lca_activity: str = "well_to_tank",
+    passengers: int = 4,
+    distance: int = 100,
+    source: str = "UK Government (BEIS, DEFRA, DESNZ)",
+):
     """Estimate emissions for a given activity_id."""
     estimate_payload = {
         "emission_factor": {
             "activity_id": activity_id,
-            #"region": region,
+            # "region": region,
             "year": 2025,  # Assuming year, or could be parameter
             "source_lca_activity": lca_activity,
-            "data_version": "^29"
+            "data_version": "^29",
+            "source": source,
         },
         "parameters": {
             "passengers": passengers,
             "distance": distance,
-            "distance_unit": "km"
-        }
+            "distance_unit": "km",
+        },
     }
     try:
         est_resp = requests.post(ESTIMATE_URL, json=estimate_payload, headers=HEADERS)
@@ -104,11 +112,22 @@ def estimate_emission_factors(activity_id: str, region: str, lca_activity: str =
 
 
 def get_emission_factors(
-    mode_of_transport: str, region: str, lca_activity: str = "well_to_tank", passengers: int = 4, distance: int = 100
+    mode_of_transport: str,
+    region: str,
+    lca_activity: str = "well_to_tank",
+    passengers: int = 4,
+    distance: int = 100,
 ):
     """Combined search and estimate for backward compatibility."""
     latest = search_emission_factors(mode_of_transport, region, lca_activity)
-    estimate_data = estimate_emission_factors(latest["activity_id"], region, lca_activity, passengers, distance, source=latest.get("source", "BEIS"))
+    estimate_data = estimate_emission_factors(
+        latest["activity_id"],
+        region,
+        lca_activity,
+        passengers,
+        distance,
+        source=latest.get("source", "BEIS"),
+    )
 
     # Prepare output (combine metadata and estimate)
     output = {
@@ -135,7 +154,9 @@ def get_emission_factors(
         "estimate_co2e": estimate_data.get("co2e"),
         "estimate_co2e_unit": estimate_data.get("co2e_unit"),
         "estimate_constituent_gases": estimate_data.get("constituent_gases"),
-        "estimate_co2e_calculation_method": estimate_data.get("co2e_calculation_method"),
+        "estimate_co2e_calculation_method": estimate_data.get(
+            "co2e_calculation_method"
+        ),
     }
     # Save to MongoDB for future fallback
     params = {
@@ -145,7 +166,7 @@ def get_emission_factors(
         "sector": "Transport",
         "year": 2025,
         "region": region,
-        "lca_activity": lca_activity
+        "lca_activity": lca_activity,
     }
     save_climatiq_response(params, output)
     return output
