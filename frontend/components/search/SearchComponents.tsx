@@ -2,6 +2,7 @@ import React from 'react';
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Search, MapPin, Plane } from 'lucide-react';
+import { sanitizeInput } from '../../utils/cn';
 
 export type AirportOption = {
   id: string;
@@ -29,7 +30,8 @@ export const AirportDropdown: React.FC<AirportDropdownProps> = ({
 }) => {
   if (!showDropdown || !searchQuery) return null;
 
-  const q = searchQuery.toLowerCase().trim();
+  const sanitizedQuery = sanitizeInput(searchQuery);
+  const q = sanitizedQuery.toLowerCase().trim();
 
   const filtered = airports.filter(opt => {
     if (!q) return true;

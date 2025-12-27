@@ -6,6 +6,7 @@ import { Label } from "../ui/label";
 import { ViewType } from '../../types';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { Header } from '../layout/Header';
+import { sanitizeInput } from '../../utils/cn';
 
 interface AuthLayoutProps {
   title: string;
@@ -106,7 +107,9 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         onSubmit={(e) => {
           e.preventDefault();
           if (!canSubmit()) return;
-          onSubmit(email, password);
+          const sanitizedEmail = sanitizeInput(email, 64);
+          const sanitizedPassword = sanitizeInput(password, 32); // password max
+          onSubmit(sanitizedEmail, sanitizedPassword);
         }}
         className="space-y-4"
       >

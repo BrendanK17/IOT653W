@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import api
 from app.routers import auth as auth_router
@@ -26,6 +26,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Custom middleware to check for frontend header
+@app.middleware("http")
+async def check_frontend_header(request: Request, call_next):
+    # Skip for auth endpoints or if it's a preflight
+    if request.method == "OPTIONS" or request.url.path.startswith("/login") or request.url.path.startswith("/register"):
+        return await call_next(request)
+    
+    # Check for custom header
+    if request.headers.get("X-Requested-By") != "GroundScanner-Frontend":
+        raise HTTPException(status_code=403, detail="Forbidden: Requests must come from the frontend")
+    
+    response = await call_next(request)
+    return response
 
 # Include routers
 app.include_router(api.router)

@@ -8,6 +8,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      TESTING: "1"
 
     steps:
     - name: Checkout code
@@ -28,9 +30,6 @@ jobs:
 
     - name: Run backend tests
       working-directory: ./backend
-      env:
-        # Use the test switch so the backend uses an in-memory MongoDB (mongomock)
-        TESTING: "1"
       run: |
         # Limit tests to 60 seconds so they can't run away and consume minutes
         timeout 60s poetry run pytest --maxfail=1 -q
