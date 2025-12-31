@@ -127,7 +127,7 @@ def _extract_first_json(text: str) -> Optional[Any]:
 
 
 def run_airport_lookup(
-    iata: str, model: str = "qwen3:480b-cloud", max_iters: int = 20
+    iata: str, model: str = "gpt-oss:120b-cloud", max_iters: int = 20
 ) -> List[Dict[str, Any]]:
     """Run the agent loop for an airport and return final transport list.
 

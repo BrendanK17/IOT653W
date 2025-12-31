@@ -97,9 +97,9 @@ const convertTransportOptions = (options: BackendTransportOption[], airportCode:
     }
     if (!price && typeof option.price === 'number' && option.price > 0) price = option.price;
 
-    // duration: backend doesn't provide duration; estimate from stops or fallback
-    const durationMinutes = backendStops ? Math.max(10, Math.round(backendStops.length * 2)) : (typeof option.duration === 'number' ? option.duration : parseInt(option.duration || '0'));
-    const duration = `${durationMinutes} mins`;
+    // duration: use value from backend, which contains realistic journey time to city center
+    const durationMinutes = typeof option.duration === 'number' ? option.duration : (option.duration ? parseInt(option.duration) : 0);
+    const duration = durationMinutes > 0 ? `${durationMinutes} mins` : 'Unknown';
 
     // stops string
     const stopsStr = backendStops ? (backendStops.length <= 1 ? 'Direct' : `${backendStops.length} stops`) : (typeof option.stops === 'string' ? option.stops : (option.stops === 0 ? 'Direct' : `${option.stops} stops`));
@@ -195,7 +195,11 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
       const code = airportCode.toUpperCase();
       const passengers = searchParams.get('passengers') || '1';
       try {
-        const res = await fetch(`${API_BASE}/airports/${code}/transports?passengers=${passengers}`);
+        const res = await fetch(`${API_BASE}/airports/${code}/transports?passengers=${passengers}`, {
+          headers: {
+            'X-Requested-By': 'GroundScanner-Frontend',
+          },
+        });
         if (!res.ok) {
           if (mounted) setTransportOptionsState([]);
           return;
@@ -212,7 +216,11 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
       const city = selectedOption?.city?.toUpperCase();
       if (city) {
         try {
-          const res = await fetch(`${API_BASE}/cities/${city}/fares`);
+          const res = await fetch(`${API_BASE}/cities/${city}/fares`, {
+            headers: {
+              'X-Requested-By': 'GroundScanner-Frontend',
+            },
+          });
           if (res.ok) {
             const data = await res.json();
             if (mounted) setFareSummary(data.fare_summary);
@@ -504,7 +512,13 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${(import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/auth/logout`, { method: 'POST', credentials: 'include' });
+      await fetch(`${(import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/auth/logout`, { 
+        method: 'POST', 
+        credentials: 'include',
+        headers: {
+          'X-Requested-By': 'GroundScanner-Frontend',
+        },
+      });
     } catch (e) {
       // ignore network errors during logout
       console.error('logout error', e);
@@ -538,7 +552,11 @@ function App() {
     __airportsLoaded = true;
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/airports`);
+        const res = await fetch(`${API_BASE}/airports`, {
+          headers: {
+            'X-Requested-By': 'GroundScanner-Frontend',
+          },
+        });
         if (!res.ok) return;
         const body = await res.json();
         const docs: BackendAirport[] = body.airports || [];

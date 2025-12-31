@@ -26,7 +26,10 @@ export const DeleteAccountCard: React.FC<DeleteAccountCardProps> = ({ userEmail,
     try {
       const res = await fetch(`${API_BASE}/auth/delete-account`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requested-By': 'GroundScanner-Frontend',
+        },
         credentials: 'include',
         body: JSON.stringify({ email: userEmail, password }),
       });

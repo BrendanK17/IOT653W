@@ -35,7 +35,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
       <Header
         isLoggedIn={false}
         onNavigate={onNavigate}
-        className="relative backdrop-blur-sm bg-white/5 border-b border-white/10"
+        className="relative backdrop-blur-sm bg-white/80 border-b border-white/20 shadow-sm"
       />
 
       <main className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 pt-20">
@@ -107,8 +107,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         onSubmit={(e) => {
           e.preventDefault();
           if (!canSubmit()) return;
-          const sanitizedEmail = sanitizeInput(email, 64);
-          const sanitizedPassword = sanitizeInput(password, 32); // password max
+          const sanitizedEmail = email.trim();
+          const sanitizedPassword = password.trim();
           onSubmit(sanitizedEmail, sanitizedPassword);
         }}
         className="space-y-4"

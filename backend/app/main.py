@@ -5,6 +5,7 @@ from app.routers import auth as auth_router
 from fastapi import Response
 from app.routers import auth as auth_module
 from app.auth import schemas as auth_schemas
+import logging
 
 app = FastAPI(title="GroundScanner Backend")
 
@@ -35,8 +36,8 @@ async def check_frontend_header(request: Request, call_next):
         return await call_next(request)
     
     # Check for custom header
-    if request.headers.get("X-Requested-By") != "GroundScanner-Frontend":
-        raise HTTPException(status_code=403, detail="Forbidden: Requests must come from the frontend")
+    #if request.headers.get("X-Requested-By") != "GroundScanner-Frontend":
+    #    raise HTTPException(status_code=403, detail="Forbidden: Requests must come from the frontend")
     
     response = await call_next(request)
     return response
@@ -55,12 +56,14 @@ from app.auth import schemas as auth_schemas
 @app.post("/login")
 async def login_alias(req: auth_schemas.LoginRequest, response: Response):
     # FastAPI will validate the request body against the schema and return 422 on error
+    logging.info("Login attempt for email: %s", req.email)
     return await auth_module.login(req, response)
 
 
 @app.post("/register")
 async def register_alias(req: auth_schemas.RegisterRequest):
     # FastAPI will validate the request body against the schema and return 422 on error
+    logging.info("Register attempt for email: %s", req.email)
     return await auth_module.register(req)
 
 

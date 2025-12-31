@@ -27,6 +27,9 @@ export const refreshAccessToken = async (): Promise<string | null> => {
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'X-Requested-By': 'GroundScanner-Frontend',
+        },
       });
       if (!res.ok) return null;
       const data = await res.json();
