@@ -27,7 +27,7 @@ const mockTransportOptions: TransportOption[] = [
   },
   {
     id: 'LHR-2',
-    mode: 'subway',
+    mode: 'underground',
     name: 'Elizabeth Line',
     airport: 'LHR',
     duration: '35 mins',

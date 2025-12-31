@@ -1,25 +1,40 @@
 // Core types for the GroundScanner application
 
-export type TransportMode = 'train' | 'bus' | 'coach' | 'taxi' | 'subway';
+export type TransportMode = 'train' | 'bus' | 'coach' | 'taxi' | 'underground';
 
 export type TabType = 'best' | 'cheapest' | 'fastest' | 'eco';
 
 export type ViewType = 'home' | 'results' | 'insights' | 'login' | 'register' | 'account' | 'transfers' | 'terminal-transfers';
+
+export interface Stop {
+  stop_name: string;
+  lat: number;
+  lon: number;
+  currency: string;
+  prices: Array<{
+    type: string;
+    amount: number;
+  }>;
+  branch_id?: string | null;
+}
 
 export interface TransportOption {
   id: string;
   mode: TransportMode;
   name: string;
   airport: string;
-  duration: string;
+  duration: string | number;
   price: number;
-  stops: string;
+  stops: string | Stop[];
   isEco: boolean;
   isFastest: boolean;
   isCheapest: boolean;
   isBest: boolean;
   route: string;
-  co2: number; // kg of CO2
+  co2: number | null; // kg of CO2
+  iata?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface FilterState {
@@ -28,7 +43,7 @@ export interface FilterState {
     bus: boolean;
     coach: boolean;
     taxi: boolean;
-    subway: boolean;
+    underground: boolean;
   };
   stops: {
     direct: boolean;

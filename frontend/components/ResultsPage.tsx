@@ -3,6 +3,7 @@ import { TransportOption } from '../types';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { useParams } from 'react-router-dom';
+import { formatDuration } from '../utils/duration';
 
 interface ResultsPageProps {
   isLoggedIn: boolean;
@@ -46,9 +47,9 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
             <h3 className="text-lg font-semibold">{option.route}</h3>
             <div className="mt-2 space-y-1">
               <p>Mode: {option.mode}</p>
-              <p>Duration: {option.duration} minutes</p>
+              <p>Duration: {formatDuration(option.duration)}</p>
               <p>Price: £{option.price}</p>
-              <p>Stops: {option.stops}</p>
+              <p>Stops: {typeof option.stops === 'string' ? option.stops : `${option.stops.length} stops`}</p>
             </div>
           </Card>
         ))}

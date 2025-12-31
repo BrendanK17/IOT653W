@@ -1,10 +1,11 @@
 import React from 'react';
 import { Table, TableHeader, TableBody } from "../ui/table";
+import { formatDuration } from "../../utils/duration";
 
 interface TransportRoute {
   route: string;
   mode: string;
-  duration: string;
+  duration: string | number;
   price: string;
 }
 
@@ -28,7 +29,7 @@ export const TransportTable: React.FC<TransportTableProps> = ({ routes }) => {
           <tr key={index}>
             <td>{route.route}</td>
             <td>{route.mode}</td>
-            <td>{route.duration}</td>
+            <td>{formatDuration(route.duration)}</td>
             <td>{route.price}</td>
           </tr>
         ))}

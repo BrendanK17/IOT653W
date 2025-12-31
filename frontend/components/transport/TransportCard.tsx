@@ -4,6 +4,7 @@ import { Card } from "../ui/card";
 import { Button } from "../ui/button";
 import { TransportOption, TransportMode } from '../../types';
 import { Train, Bus, Car, Clock, ExternalLink, Map, Leaf } from 'lucide-react';
+import { formatDuration } from '../../utils/duration';
 
 interface FareSummary {
   modes?: Record<string, {
@@ -38,7 +39,7 @@ const getTransportIcon = (mode: TransportMode) => {
     case 'bus': return <Bus className="w-5 h-5" />;
     case 'coach': return <Bus className="w-5 h-5" />;
     case 'taxi': return <Car className="w-5 h-5" />;
-    case 'subway': return <Train className="w-5 h-5" />;
+    case 'underground': return <Train className="w-5 h-5" />;
     default: return <Train className="w-5 h-5" />;
   }
 };
@@ -113,9 +114,9 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
               <span className="flex items-center">
                 <Clock className="w-4 h-4 mr-1" />
-                {transport.duration}
+                {formatDuration(transport.duration)}
               </span>
-              <span>{transport.stops}</span>
+              <span>{typeof transport.stops === 'string' ? transport.stops : `${transport.stops.length} stops`}</span>
               {transport.co2 && (
                 <span className={`flex items-center ${transport.isEco ? 'text-green-600' : 'text-gray-600'}`}>
                   <Leaf className="w-3 h-3 mr-1" />

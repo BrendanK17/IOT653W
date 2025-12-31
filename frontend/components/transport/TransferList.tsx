@@ -52,12 +52,13 @@ export function TransferList({
             return price <= filters.maxPrice;
           })
           .filter(t => {
-            const minutes = parseInt(t.duration);
+            const minutes = typeof t.duration === 'number' ? t.duration : parseInt(t.duration);
             return minutes <= filters.maxTime;
           })
           .filter(t => {
             if (!filters.stops.direct && !filters.stops.oneOrMore) return true;
-            const hasStops = t.stops && t.stops.toLowerCase().includes('stop');
+            const stopsStr = typeof t.stops === 'string' ? t.stops : `${t.stops.length} stops`;
+            const hasStops = stopsStr && stopsStr.toLowerCase().includes('stop');
             return filters.stops.direct ? !hasStops : hasStops;
           })
           .map((transfer) => (

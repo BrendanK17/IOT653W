@@ -23,7 +23,7 @@ export const mockTransportOptions: TransportOption[] = [
   },
   {
     id: '2',
-    mode: 'subway',
+    mode: 'underground',
     name: 'Piccadilly Line',
     airport: 'LHR',
     duration: '45 mins',

@@ -10,7 +10,7 @@ export interface FilterState {
     bus: boolean;
     coach: boolean;
     train: boolean;
-    subway: boolean;
+    underground: boolean;
   };
   stops: {
     direct: boolean;
@@ -33,7 +33,7 @@ const transportModeIcons = {
   bus: Bus,
   coach: Bus,
   train: Train,
-  subway: Train,
+  underground: Train,
 };
 
 export function FilterSidebar({ filters, onFiltersChange }: FilterSidebarProps) {

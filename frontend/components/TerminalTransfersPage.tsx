@@ -24,7 +24,7 @@ const API_BASE: string = (import.meta as unknown as { env?: { VITE_API_BASE?: st
 
 const extractIATA = (airportString: string): string => {
   const match = airportString.match(/\(([A-Z]{3})\)/);
-  return match ? match[1] : airportString;
+  return match && match[1] ? match[1] : airportString;
 };
 
 const TerminalTransfersPage: React.FC<TerminalTransfersPageProps> = ({
