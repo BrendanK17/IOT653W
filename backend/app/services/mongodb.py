@@ -2,6 +2,9 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import os
 from unittest.mock import MagicMock
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Environment flags
 TESTING = os.getenv("TESTING", "0").lower() in ("1", "true", "yes")
@@ -40,6 +43,9 @@ AIRPORT_DISTANCE_COLLECTION = "airport_city_distances"
 
 # --- Transport mode -> Climatiq activity mapping collection ---
 TRANSPORT_ACTIVITY_MAPPING_COLLECTION = "transport_activity_mapping"
+
+# --- Terminal Transfers Collection ---
+TERMINAL_TRANSFERS_COLLECTION = "terminal_transfers"
 
 
 def save_activity_ids(location: str, activity_ids: list):
@@ -280,3 +286,45 @@ def save_transport_activity_mapping(mapping: dict):
         {"_id": "default", "mapping": mapping},
         upsert=True,
     )
+
+
+def save_terminal_transfers(iata: str, sections: list):
+    """Save terminal transfer information for an airport.
+    
+    Args:
+        iata: Airport IATA code (e.g., 'LHR')
+        sections: List of transfer section objects with 'name' and 'tips' keys
+    """
+    db = client[DB_NAME]
+    collection = db[TERMINAL_TRANSFERS_COLLECTION]
+    collection.update_one(
+        {"iata": iata.upper()},
+        {"$set": {"iata": iata.upper(), "sections": sections}},
+        upsert=True,
+    )
+
+
+def get_terminal_transfers(iata: str):
+    """Retrieve terminal transfer information for an airport.
+    
+    Args:
+        iata: Airport IATA code (e.g., 'LHR')
+    Returns:
+        Dict with sections or None if not found
+    """
+    db = client[DB_NAME]
+    collection = db[TERMINAL_TRANSFERS_COLLECTION]
+    doc = collection.find_one({"iata": iata.upper()}, {"_id": 0})
+    return doc
+
+
+def get_all_terminal_transfers():
+    """Retrieve all terminal transfer information from MongoDB.
+    
+    Returns:
+        List of terminal transfer documents sorted by IATA code
+    """
+    db = client[DB_NAME]
+    collection = db[TERMINAL_TRANSFERS_COLLECTION]
+    docs = list(collection.find({}, {"_id": 0}).sort("iata", 1))
+    return docs

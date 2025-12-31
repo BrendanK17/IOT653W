@@ -35,7 +35,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
       <Header
         isLoggedIn={false}
         onNavigate={onNavigate}
-        className="relative backdrop-blur-sm bg-white/5 border-b border-white/10"
+        className="relative backdrop-blur-sm bg-white/80 border-b border-white/20 shadow-sm"
       />
 
       <main className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 pt-20">

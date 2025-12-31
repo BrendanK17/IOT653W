@@ -19,6 +19,7 @@ from app.services.airports import (
 )
 from app.services.airport_prompt import get_prompt
 from app.services.city_center_prompt import get_prompt as get_city_center_prompt
+from app.services.terminal_transfers_prompt import get_prompt as get_terminal_transfers_prompt
 from app.services.airport_transports import (
     get_transports_for_airport,
     replace_transports_for_airport,
@@ -52,6 +53,9 @@ from app.services.mongodb import (
     get_all_climatiq_responses,
     get_transport_activity_mapping,
     save_transport_activity_mapping,
+    save_terminal_transfers,
+    get_terminal_transfers,
+    get_all_terminal_transfers,
 )
 from app.services.mongodb import save_airport_distance, get_airport_distance
 from math import radians, sin, cos, atan2, sqrt
@@ -73,7 +77,7 @@ def query_ollama(
     """Query the Ollama LLM with a user prompt."""
     messages = [{"role": "user", "content": prompt}]
     try:
-        response = ask_ollama("gpt-oss:120b", messages)
+        response = ask_ollama("gpt-oss:120b-cloud", messages)
         return {"response": response}
     except Exception as e:
         logging.exception("Error querying Ollama")
@@ -485,6 +489,11 @@ def api_update_airports(country: str = "ALL"):
             )
 
         # save for country or ALL
+        # First, delete all existing airports to avoid duplicates from previous updates
+        from app.services.mongodb import client, DB_NAME
+        db = client[DB_NAME]
+        col = db["airports"]
+        col.delete_many({})
         if country.upper() == "ALL":
             replace_all_airports(cleaned)
         else:
@@ -831,3 +840,113 @@ def update_country_regions(regions: dict = Body(...)):
     """Update the country to region mappings."""
     save_country_regions(regions)
     return {"message": "Country regions updated successfully"}
+
+
+@router.get("/airports/{iata}/terminal-transfers")
+def api_get_terminal_transfers(iata: str):
+    """Return terminal transfer information for a specific airport.
+
+    If terminal transfers are not present in the database, return 404.
+    """
+    try:
+        iata = validate_iata(iata)
+        transfers = get_terminal_transfers(iata)
+        if not transfers:
+            raise HTTPException(status_code=404, detail="Terminal transfers not found for this airport")
+        return transfers
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Failed to get terminal transfers for %s", iata)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/airports/{iata}/terminal-transfers/update")
+def api_update_terminal_transfers(iata: str):
+    """Generate and save terminal transfer information for a specific airport.
+
+    This endpoint calls Ollama with a fixed prompt to generate JSON and saves the result to MongoDB.
+    """
+    try:
+        iata = validate_iata(iata)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    logging.info("=== UPDATE TERMINAL TRANSFERS ENDPOINT CALLED ===")
+    logging.info("Airport IATA: %s", iata)
+
+    # Get the airport to ensure it exists
+    airport = get_airport_by_iata(iata.upper())
+    if not airport:
+        raise HTTPException(status_code=404, detail="Airport not found")
+
+    prompt = get_terminal_transfers_prompt()
+    messages = [{"role": "user", "content": prompt + f"\nIATA: {iata.upper()}"}]
+
+    try:
+        logging.info("Calling Ollama to generate terminal transfers for %s...", iata)
+        response_text = ask_ollama("gpt-oss:120b", messages)
+        logging.info("Ollama response received for terminal transfers")
+    except Exception as e:
+        logging.exception("Ollama query failed for terminal transfers")
+        raise HTTPException(status_code=500, detail="LLM request failed")
+
+    # Parse JSON from response
+    try:
+        data = json.loads(response_text)
+        if not isinstance(data, dict):
+            raise ValueError("Expected JSON object as top level")
+
+        # Extract sections for this airport
+        iata_upper = iata.upper()
+        if iata_upper not in data:
+            raise ValueError(f"No data returned for airport {iata_upper}")
+
+        airport_data = data[iata_upper]
+        if not isinstance(airport_data, dict):
+            raise ValueError("Airport data must be an object")
+
+        sections = airport_data.get("sections", [])
+        if not isinstance(sections, list):
+            raise ValueError("Sections must be an array")
+
+        # Validate sections structure
+        for section in sections:
+            if not isinstance(section, dict):
+                raise ValueError("Each section must be an object")
+            if "name" not in section or "tips" not in section:
+                raise ValueError("Each section must have 'name' and 'tips' fields")
+            if not isinstance(section["tips"], list):
+                raise ValueError("Tips must be an array of strings")
+
+        logging.info("Saving %d sections for airport %s", len(sections), iata)
+        save_terminal_transfers(iata.upper(), sections)
+        logging.info("Successfully saved terminal transfers for %s", iata)
+
+        return {"message": "Terminal transfers updated", "iata": iata.upper(), "count": len(sections)}
+
+    except json.JSONDecodeError:
+        logging.exception("Failed to parse JSON from LLM response")
+        raise HTTPException(
+            status_code=500, detail="Failed to parse JSON from LLM response"
+        )
+    except ValueError as e:
+        logging.exception("Validation error: %s", str(e))
+        raise HTTPException(status_code=500, detail=f"Invalid data format: {str(e)}")
+    except Exception:
+        logging.exception("Unexpected error updating terminal transfers for %s", iata)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/terminal-transfers")
+def api_get_all_terminal_transfers():
+    """Return all terminal transfer information from MongoDB, sorted by IATA code."""
+    try:
+        transfers = get_all_terminal_transfers()
+        return {"transfers": transfers, "count": len(transfers)}
+    except Exception:
+        logging.exception("Failed to get all terminal transfers")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
