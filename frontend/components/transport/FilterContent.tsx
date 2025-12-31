@@ -28,7 +28,7 @@ export const FilterContent: React.FC<FilterContentProps> = ({
             { key: 'train', label: 'Train', icon: <Train className="w-4 h-4" /> },
             { key: 'bus', label: 'Bus', icon: <Bus className="w-4 h-4" /> },
             { key: 'taxi', label: 'Taxi', icon: <Car className="w-4 h-4" /> },
-            { key: 'subway', label: 'Subway', icon: <Train className="w-4 h-4" /> },
+            { key: 'underground', label: 'Underground', icon: <Train className="w-4 h-4" /> },
           ].map(({ key, label, icon }) => (
             <div key={key} className="flex items-center space-x-2">
               <Checkbox

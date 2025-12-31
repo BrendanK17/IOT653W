@@ -52,8 +52,7 @@ export function TransferList({
             return price <= filters.maxPrice;
           })
           .filter(t => {
-            const durationStr = typeof t.duration === 'number' ? t.duration.toString() : t.duration;
-            const minutes = parseInt(durationStr);
+            const minutes = typeof t.duration === 'number' ? t.duration : parseInt(t.duration);
             return minutes <= filters.maxTime;
           })
           .filter(t => {

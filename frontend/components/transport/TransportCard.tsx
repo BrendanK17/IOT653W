@@ -4,6 +4,7 @@ import { Card } from "../ui/card";
 import { Button } from "../ui/button";
 import { TransportOption, TransportMode } from '../../types';
 import { Train, Bus, Car, Clock, ExternalLink, Map, Leaf } from 'lucide-react';
+import { formatDuration } from '../../utils/duration';
 
 interface FareSummary {
   modes?: Record<string, {
@@ -113,7 +114,7 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
               <span className="flex items-center">
                 <Clock className="w-4 h-4 mr-1" />
-                {transport.duration}
+                {formatDuration(transport.duration)}
               </span>
               <span>{typeof transport.stops === 'string' ? transport.stops : `${transport.stops.length} stops`}</span>
               {transport.co2 && (

@@ -97,9 +97,8 @@ const convertTransportOptions = (options: BackendTransportOption[], airportCode:
     }
     if (!price && typeof option.price === 'number' && option.price > 0) price = option.price;
 
-    // duration: use value from backend, which contains realistic journey time to city center
-    const durationMinutes = typeof option.duration === 'number' ? option.duration : (option.duration ? parseInt(option.duration) : 0);
-    const duration = durationMinutes > 0 ? `${durationMinutes}` : '0';
+    // duration: keep as number in minutes, always from backend
+    const duration = typeof option.duration === 'number' ? option.duration : (option.duration ? parseInt(option.duration) : 0);
 
     // stops: preserve the actual stops array if available, otherwise use string
     const stops = backendStops && backendStops.length > 0 ? backendStops : (typeof option.stops === 'string' ? option.stops : (option.stops === 0 ? 'Direct' : `${option.stops} stops`));
@@ -415,7 +414,7 @@ function App() {
         train: true,
         bus: true,
         taxi: true,
-        subway: true,
+        underground: true,
       },
     },
   });

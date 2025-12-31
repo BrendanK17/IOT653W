@@ -43,7 +43,7 @@ export interface FilterState {
     bus: boolean;
     coach: boolean;
     taxi: boolean;
-    subway: boolean;
+    underground: boolean;
   };
   stops: {
     direct: boolean;

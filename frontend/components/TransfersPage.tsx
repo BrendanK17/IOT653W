@@ -57,7 +57,7 @@ const TransfersPage = ({
       bus: true,
       coach: true,
       train: true,
-      subway: true
+      underground: true
     },
     stops: {
       direct: false,
