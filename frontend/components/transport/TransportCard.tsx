@@ -38,7 +38,7 @@ const getTransportIcon = (mode: TransportMode) => {
     case 'bus': return <Bus className="w-5 h-5" />;
     case 'coach': return <Bus className="w-5 h-5" />;
     case 'taxi': return <Car className="w-5 h-5" />;
-    case 'subway': return <Train className="w-5 h-5" />;
+    case 'underground': return <Train className="w-5 h-5" />;
     default: return <Train className="w-5 h-5" />;
   }
 };
@@ -115,7 +115,7 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
                 <Clock className="w-4 h-4 mr-1" />
                 {transport.duration}
               </span>
-              <span>{transport.stops}</span>
+              <span>{typeof transport.stops === 'string' ? transport.stops : `${transport.stops.length} stops`}</span>
               {transport.co2 && (
                 <span className={`flex items-center ${transport.isEco ? 'text-green-600' : 'text-gray-600'}`}>
                   <Leaf className="w-3 h-3 mr-1" />

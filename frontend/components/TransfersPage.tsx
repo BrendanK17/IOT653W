@@ -74,10 +74,10 @@ const TransfersPage = ({
 
   const [searchValue, setSearchValue] = useState(selectedAirport || initialSearchQuery || '');
   const [showDropdown, setShowDropdown] = useState(false);
-
   // Sort and filter transport options based on the active tab
-  const getDurationInMinutes = (duration: string): number => {
-    const match = duration.match(/(\d+)/);
+  const getDurationInMinutes = (duration: string | number): number => {
+    const durationStr = typeof duration === 'number' ? duration.toString() : duration;
+    const match = durationStr.match(/(\d+)/);
     return match ? parseInt(match[0]) : 0;
   };
 

@@ -48,7 +48,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
               <p>Mode: {option.mode}</p>
               <p>Duration: {option.duration} minutes</p>
               <p>Price: £{option.price}</p>
-              <p>Stops: {option.stops}</p>
+              <p>Stops: {typeof option.stops === 'string' ? option.stops : `${option.stops.length} stops`}</p>
             </div>
           </Card>
         ))}

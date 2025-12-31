@@ -72,7 +72,7 @@ const convertTransportOptions = (options: BackendTransportOption[], airportCode:
     if (mm === 'rail' || mm === 'train') return 'train';
     if (mm === 'bus') return 'bus';
     if (mm === 'coach') return 'coach';
-    if (mm === 'underground' || mm === 'subway' || mm === 'tube') return 'subway';
+    if (mm === 'underground' || mm === 'subway' || mm === 'tube') return 'underground';
     if (mm === 'taxi' || mm === 'cab' || mm === 'ride_hailing') return 'taxi';
     return 'train';
   };
@@ -99,10 +99,10 @@ const convertTransportOptions = (options: BackendTransportOption[], airportCode:
 
     // duration: use value from backend, which contains realistic journey time to city center
     const durationMinutes = typeof option.duration === 'number' ? option.duration : (option.duration ? parseInt(option.duration) : 0);
-    const duration = durationMinutes > 0 ? `${durationMinutes} mins` : 'Unknown';
+    const duration = durationMinutes > 0 ? `${durationMinutes}` : '0';
 
-    // stops string
-    const stopsStr = backendStops ? (backendStops.length <= 1 ? 'Direct' : `${backendStops.length} stops`) : (typeof option.stops === 'string' ? option.stops : (option.stops === 0 ? 'Direct' : `${option.stops} stops`));
+    // stops: preserve the actual stops array if available, otherwise use string
+    const stops = backendStops && backendStops.length > 0 ? backendStops : (typeof option.stops === 'string' ? option.stops : (option.stops === 0 ? 'Direct' : `${option.stops} stops`));
 
     // route: prefer option.route or combine name + last stop
     let route = option.route || option.name || '';
@@ -112,7 +112,7 @@ const convertTransportOptions = (options: BackendTransportOption[], airportCode:
     }
 
     // co2: backend may have null
-    const co2 = (option.co2 === null || option.co2 === undefined) ? 0 : Number(option.co2) || 0;
+    const co2 = (option.co2 === null || option.co2 === undefined) ? null : Number(option.co2) || 0;
 
     // simple heuristics for flags
     const mode = mapMode(option.mode || option.type || 'train');
@@ -125,7 +125,7 @@ const convertTransportOptions = (options: BackendTransportOption[], airportCode:
       airport: airportCode,
       duration,
       price,
-      stops: stopsStr,
+      stops,
       isEco,
       isFastest: false,
       isCheapest: false,
