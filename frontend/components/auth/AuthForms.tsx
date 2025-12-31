@@ -107,8 +107,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         onSubmit={(e) => {
           e.preventDefault();
           if (!canSubmit()) return;
-          const sanitizedEmail = email.trim();
-          const sanitizedPassword = password.trim();
+          const sanitizedEmail = sanitizeInput(email, 64);
+          const sanitizedPassword = sanitizeInput(password, 32); // password max
           onSubmit(sanitizedEmail, sanitizedPassword);
         }}
         className="space-y-4"
