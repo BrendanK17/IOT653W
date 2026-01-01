@@ -47,6 +47,10 @@ TRANSPORT_ACTIVITY_MAPPING_COLLECTION = "transport_activity_mapping"
 # --- Terminal Transfers Collection ---
 TERMINAL_TRANSFERS_COLLECTION = "terminal_transfers"
 
+# --- Sponsored Transports Collection ---
+SPONSORED_TRANSPORTS_COLLECTION = "sponsored_transports"
+
+
 
 def save_activity_ids(location: str, activity_ids: list):
     """
@@ -328,3 +332,53 @@ def get_all_terminal_transfers():
     collection = db[TERMINAL_TRANSFERS_COLLECTION]
     docs = list(collection.find({}, {"_id": 0}).sort("iata", 1))
     return docs
+
+
+def add_sponsored_transport(iata: str, transport_data: dict):
+    """Add a sponsored transport option for an airport.
+    
+    Args:
+        iata: Airport IATA code (e.g., 'LHR')
+        transport_data: Dictionary containing transport details (name, mode, price, duration, route, stops, etc.)
+    
+    Returns:
+        The inserted document ID
+    """
+    db = client[DB_NAME]
+    collection = db[SPONSORED_TRANSPORTS_COLLECTION]
+    
+    # Add sponsored flag and ensure IATA is uppercase
+    transport_data["airport"] = iata.upper()
+    transport_data["sponsored"] = True
+    
+    # Insert and return the result
+    result = collection.insert_one(transport_data)
+    return result.inserted_id
+
+
+def get_sponsored_transports(iata: str):
+    """Retrieve all sponsored transport options for an airport.
+    
+    Args:
+        iata: Airport IATA code (e.g., 'LHR')
+    
+    Returns:
+        List of sponsored transport documents for the airport
+    """
+    db = client[DB_NAME]
+    collection = db[SPONSORED_TRANSPORTS_COLLECTION]
+    docs = list(collection.find({"airport": iata.upper()}, {"_id": 1}))
+    return docs
+
+
+def get_all_sponsored_transports():
+    """Retrieve all sponsored transport options from all airports.
+    
+    Returns:
+        List of all sponsored transport documents
+    """
+    db = client[DB_NAME]
+    collection = db[SPONSORED_TRANSPORTS_COLLECTION]
+    docs = list(collection.find({}, {"_id": 1}).sort("airport", 1))
+    return docs
+

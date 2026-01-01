@@ -61,6 +61,10 @@ export function TransferList({
             const hasStops = stopsStr && stopsStr.toLowerCase().includes('stop');
             return filters.stops.direct ? !hasStops : hasStops;
           })
+          .filter(t => {
+            if (!filters.firstClassOnly) return true;
+            return t.hasFirstClass === true;
+          })
           .map((transfer) => (
             <TransportCard
               key={transfer.id}

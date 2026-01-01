@@ -131,6 +131,8 @@ const convertTransportOptions = (options: BackendTransportOption[], airportCode:
       isBest: false,
       route: route || (option.route || ''),
       co2,
+      sponsored: (option as any).sponsored || false, // eslint-disable-line @typescript-eslint/no-explicit-any
+      hasFirstClass: (option as any).hasFirstClass || false, // eslint-disable-line @typescript-eslint/no-explicit-any
     } as TransportOption;
   });
 };
@@ -204,7 +206,26 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
           return;
         }
         const body = await res.json().catch(() => ({}));
-        const items = Array.isArray(body.transports) ? body.transports : [];
+        let items = Array.isArray(body.transports) ? body.transports : [];
+        
+        // Fetch and merge sponsored transports
+        try {
+          const sponsoredRes = await fetch(`${API_BASE}/airports/${code}/sponsored-transports`, {
+            headers: {
+              'X-Requested-By': 'GroundScanner-Frontend',
+            },
+          });
+          if (sponsoredRes.ok) {
+            const sponsoredBody = await sponsoredRes.json().catch(() => ({}));
+            const sponsoredItems = Array.isArray(sponsoredBody.transports) ? sponsoredBody.transports : [];
+            // Merge sponsored transports with regular ones
+            items = [...items, ...sponsoredItems];
+          }
+        } catch (e) {
+          // If sponsored transports fail to load, just continue with regular transports
+          console.warn('Failed to load sponsored transports:', e);
+        }
+        
         if (mounted) setTransportOptionsState(convertTransportOptions(items, code));
       } catch (e) {
         if (mounted) setTransportOptionsState([]);
@@ -336,6 +357,54 @@ const TerminalTransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: bo
 const InsightsPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; airports: AirportOption[] }) => {
   const { airportCode } = useParams<{ airportCode: string }>();
   const navigate = useNavigate();
+  const [transportOptionsState, setTransportOptionsState] = useState<TransportOption[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      if (!airportCode) {
+        setTransportOptionsState([]);
+        return;
+      }
+      const code = airportCode.toUpperCase();
+      const passengers = '1';
+      try {
+        const res = await fetch(`${API_BASE}/airports/${code}/transports?passengers=${passengers}`, {
+          headers: {
+            'X-Requested-By': 'GroundScanner-Frontend',
+          },
+        });
+        if (!res.ok) {
+          if (mounted) setTransportOptionsState([]);
+          return;
+        }
+        const body = await res.json().catch(() => ({}));
+        let items = Array.isArray(body.transports) ? body.transports : [];
+        
+        // Fetch and merge sponsored transports
+        try {
+          const sponsoredRes = await fetch(`${API_BASE}/airports/${code}/sponsored-transports`, {
+            headers: {
+              'X-Requested-By': 'GroundScanner-Frontend',
+            },
+          });
+          if (sponsoredRes.ok) {
+            const sponsoredBody = await sponsoredRes.json().catch(() => ({}));
+            const sponsoredItems = Array.isArray(sponsoredBody.transports) ? sponsoredBody.transports : [];
+            items = [...items, ...sponsoredItems];
+          }
+        } catch (e) {
+          console.warn('Failed to load sponsored transports:', e);
+        }
+        
+        if (mounted) setTransportOptionsState(convertTransportOptions(items, code));
+      } catch (e) {
+        if (mounted) setTransportOptionsState([]);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, [airportCode]);
 
   const airportName = getAirportNameFromCode(airportCode || '', airports);
 
@@ -372,17 +441,11 @@ const InsightsPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; ai
     }
   };
 
-  const handleDarkModeChange = (value: boolean) => {
-    // For now, just log - in a real app this would update global state
-    console.log('Dark mode changed:', value);
-  };
-
   return (
     <NewInsightsPage
-      darkMode={false} // Default to light mode for now
       isLoggedIn={isLoggedIn}
-      onDarkModeChange={handleDarkModeChange}
       onNavigate={handleNavigate}
+      transportOptions={transportOptionsState}
     />
   );
 };

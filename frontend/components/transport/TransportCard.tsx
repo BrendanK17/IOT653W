@@ -99,9 +99,19 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
   };
 
   return (
-    <Card className="p-4 sm:p-6 hover:shadow-lg transition-shadow bg-white border border-gray-200">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-        <div className="flex items-start space-x-3 sm:space-x-4 flex-1 min-w-0">
+    <div>
+      {/* Sponsored indicator bar */}
+      {transport.sponsored && (
+        <div className="bg-gradient-to-r from-amber-400 to-yellow-300 text-gray-900 font-bold px-4 py-2 rounded-t-lg border-b-2 border-amber-500 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">⭐</span>
+            <span>Sponsored</span>
+          </div>
+        </div>
+      )}
+      <Card className={`w-full p-4 sm:p-6 hover:shadow-lg transition-shadow bg-white ${transport.sponsored ? 'border-2 border-amber-300 rounded-b-lg' : 'border border-gray-200'}`}>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          <div className="flex items-start space-x-3 sm:space-x-4 flex-1 min-w-0">
           <div className="p-2 rounded-lg bg-blue-50 shrink-0">
             {getTransportIcon(transport.mode)}
           </div>
@@ -153,6 +163,7 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
         </div>
       </div>
     </Card>
+    </div>
   );
 };
 

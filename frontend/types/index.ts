@@ -35,6 +35,8 @@ export interface TransportOption {
   iata?: string;
   created_at?: string;
   updated_at?: string;
+  sponsored?: boolean; // Flag to indicate if this is a sponsored transport option
+  hasFirstClass?: boolean; // Flag to indicate if first class tickets are available
 }
 
 export interface FilterState {

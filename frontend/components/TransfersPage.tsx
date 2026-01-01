@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { TransportOption, ViewType } from '../types';
 import { MainLayout } from './layout/MainLayout';
 import { FilterSidebar } from './transport/FilterSidebar';
@@ -51,6 +51,29 @@ const TransfersPage = ({
   searchQuery: initialSearchQuery,
   fareSummary,
 }: TransfersPageProps) => {
+  // Calculate dynamic filter bounds from transport options
+  const calculateFilterBounds = () => {
+    if (transportOptions.length === 0) {
+      return { minPrice: 0, maxPrice: 200, minTime: 0, maxTime: 180 };
+    }
+
+    const prices = transportOptions.map(t => t.price).filter(p => p !== undefined);
+    const durations = transportOptions.map(t => {
+      if (typeof t.duration === 'number') return t.duration;
+      const match = t.duration.toString().match(/(\d+)/);
+      return match ? parseInt(match[0]) : 0;
+    }).filter(d => d !== undefined);
+
+    const minPrice = prices.length > 0 ? Math.floor(Math.min(...prices)) : 0;
+    const maxPrice = prices.length > 0 ? Math.ceil(Math.max(...prices)) : 200;
+    const minTime = durations.length > 0 ? Math.floor(Math.min(...durations)) : 0;
+    const maxTime = durations.length > 0 ? Math.ceil(Math.max(...durations)) : 180;
+
+    return { minPrice, maxPrice, minTime, maxTime };
+  };
+
+  const bounds = calculateFilterBounds();
+
   const [filters, setFilters] = useState<FilterState>({
     transportModes: {
       taxi: true,
@@ -63,16 +86,44 @@ const TransfersPage = ({
       direct: false,
       oneOrMore: false
     },
-    maxTime: 180,
-    maxPrice: 200,
+    maxTime: bounds.maxTime,
+    maxPrice: bounds.maxPrice,
     departureTime: [6, 23],
     flexibleTicketsOnly: false,
     firstClassOnly: false
   });
 
+  // Update filter bounds when transport options change
+  useEffect(() => {
+    const newBounds = calculateFilterBounds();
+    setFilters(prev => ({
+      ...prev,
+      maxTime: newBounds.maxTime,
+      maxPrice: newBounds.maxPrice
+    }));
+  }, [transportOptions]);
+
+
   const [activeTab, setActiveTab] = useState('best-overall');
 
-  const [searchValue, setSearchValue] = useState(selectedAirport || initialSearchQuery || '');
+  // Get full airport name for the search box
+  const getFullAirportName = (code: string): string => {
+    if (!code) return '';
+    const airport = airports.find(a => a.iata?.toUpperCase() === code.toUpperCase() || a.value?.toUpperCase() === code.toUpperCase());
+    if (airport) {
+      if (airport.type === 'city_all') {
+        return `${airport.city} (ALL)`;
+      }
+      return `${airport.name || airport.city} (${airport.iata || code.toUpperCase()})`;
+    }
+    return code;
+  };
+
+  const [searchValue, setSearchValue] = useState(
+    selectedAirport 
+      ? getFullAirportName(selectedAirport) 
+      : (initialSearchQuery || '')
+  );
   const [showDropdown, setShowDropdown] = useState(false);
   // Sort and filter transport options based on the active tab
   const getDurationInMinutes = (duration: string | number): number => {
@@ -110,7 +161,7 @@ const TransfersPage = ({
       {/* Secondary Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-14">
+          <div className="flex justify-between items-center h-20 py-2">
             <div className="flex items-center space-x-4">
               <div className="relative">
                 <SearchBox
@@ -175,7 +226,6 @@ const TransfersPage = ({
                 }`}
               >
                 {tab.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                <span className="ml-2">({sortedTransports[tab as keyof typeof sortedTransports].length})</span>
               </Button>
             ))}
           </div>
@@ -184,18 +234,22 @@ const TransfersPage = ({
 
       <div className="h-[calc(100vh-8rem)] flex overflow-hidden">
         {/* Filters Sidebar - Fixed width */}
-        <aside className="w-80 flex-shrink-0 bg-gray-50 border-r border-gray-200 overflow-y-auto">
+        <aside className="w-96 flex-shrink-0 bg-gray-50 border-r border-gray-200 overflow-y-auto">
           <div className="p-6">
             <FilterSidebar
               filters={filters}
               onFiltersChange={setFilters}
+              minTimeLimit={bounds.minTime}
+              maxTimeLimit={bounds.maxTime}
+              minPriceLimit={bounds.minPrice}
+              maxPriceLimit={bounds.maxPrice}
             />
           </div>
         </aside>
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto">
-          <div className="container px-8 py-6">
+          <div className="w-full px-8 py-6">
             <TransferList
               transportOptions={sortedTransports[activeTab as keyof typeof sortedTransports]}
               filters={filters}

@@ -17,6 +17,7 @@ Emit ONLY this JSON array with MULTIPLE transport options:
     "mode": "train",
     "duration": 15,
     "co2": null,
+    "hasFirstClass": true,
     "stops": [
       {"stop_name":"Heathrow Terminal 5","lat":51.47,"lon":-0.4863,"currency":"GBP","prices":[{"type":"standard","amount":0}],"branch_id":"T5-branch"},
       {"stop_name":"Heathrow Terminal 4","lat":51.459,"lon":-0.447,"currency":"GBP","prices":[{"type":"standard","amount":0}],"branch_id":"T4-branch"},
@@ -32,6 +33,7 @@ Emit ONLY this JSON array with MULTIPLE transport options:
     "mode": "train",
     "duration": 30,
     "co2": null,
+    "hasFirstClass": false,
     "stops": [
       {"stop_name":"Reading","lat":51.3739,"lon":-0.9716,"currency":"GBP","prices":[{"type":"standard","amount":17.50}],"branch_id":"reading-branch"},
       {"stop_name":"Twyford","lat":51.4124,"lon":-0.8299,"currency":"GBP","prices":[{"type":"standard","amount":15.50}],"branch_id":"reading-branch"},
@@ -66,6 +68,7 @@ Emit ONLY this JSON array with MULTIPLE transport options:
     "mode": "underground",
     "duration": 50,
     "co2": null,
+    "hasFirstClass": false,
     "stops": [
       {"stop_name":"Heathrow Terminal 5","lat":51.47,"lon":-0.4863,"currency":"GBP","prices":[{"type":"peak","amount":5.90},{"type":"off_peak","amount":3.80}],"branch_id":"T5-line"},
       {"stop_name":"Heathrow Terminal 4","lat":51.459,"lon":-0.447,"currency":"GBP","prices":[{"type":"peak","amount":5.90},{"type":"off_peak","amount":3.80}],"branch_id":"T4-line"},
@@ -125,6 +128,7 @@ Final Answer Schema:
       "underground", "tube", "metro", "train", "rail", "bus", "coach"
   - duration: journey time in MINUTES from airport to city center (integer)
   - co2: always null
+  - hasFirstClass: boolean indicating if first class tickets are available (true or false)
   - stops: array of stop objects, LISTED IN COMPLETE ORDER, each with:
     - stop_name: station/stop name (string)
     - lat: latitude WGS84 (number)
@@ -139,7 +143,7 @@ RULES:
 3. For multi-branch routes, use branch_id to identify separate branches
 4. Stops with the same branch_id should connect to each other in sequence
 5. Use null for branch_id on the main line and at convergence hubs
-6. Use realistic coordinates and prices to 2 decimal places or whole numbers
+6. PRICES: Format all prices to either 0 decimal places (whole numbers like 25, 30) OR exactly 2 decimal places (like 25.50, 17.90). NO other formats allowed.
 7. For EACH transport option, list ALL stations/stops in order from airport to city center
 8. DURATION is CRITICAL: Provide an accurate, realistic journey time in minutes from the airport to the city center
 9. Never output non-JSON text
