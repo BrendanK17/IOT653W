@@ -3,11 +3,13 @@ import { MainLayout } from './layout/MainLayout';
 import type { ViewType } from '../types';
 import { Button } from './ui/button';
 import { ArrowLeft } from 'lucide-react';
+import type { AirportOption } from './search/SearchComponents';
 
 interface TerminalTransfersPageProps {
   isLoggedIn: boolean;
   onNavigate: (view: ViewType) => void;
   selectedAirport: string;
+  airports?: AirportOption[];
 }
 
 interface Section {
@@ -30,11 +32,25 @@ const extractIATA = (airportString: string): string => {
 const TerminalTransfersPage: React.FC<TerminalTransfersPageProps> = ({
   isLoggedIn,
   onNavigate,
-  selectedAirport
+  selectedAirport,
+  airports = []
 }) => {
   const [transfers, setTransfers] = useState<TerminalTransfers | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Get full airport name from airports list
+  const getFullAirportName = (code: string): string => {
+    if (!code) return '';
+    const airport = airports.find(a => a.iata?.toUpperCase() === code.toUpperCase() || a.value?.toUpperCase() === code.toUpperCase());
+    if (airport) {
+      if (airport.type === 'city_all') {
+        return `${airport.city} (ALL)`;
+      }
+      return `${airport.city ? airport.city + ' ' : ''}${airport.name || ''}`.trim() + (airport.iata ? ` (${airport.iata})` : '');
+    }
+    return code;
+  };
 
   useEffect(() => {
     const fetchTerminalTransfers = async () => {
@@ -90,7 +106,7 @@ const TerminalTransfersPage: React.FC<TerminalTransfersPageProps> = ({
                 Back to Transfers
               </Button>
               <h1 className="text-xl font-semibold text-gray-900">
-                Terminal Transfer Details - {selectedAirport}
+                Terminal Transfer Details - {getFullAirportName(selectedAirport)}
               </h1>
             </div>
           </div>

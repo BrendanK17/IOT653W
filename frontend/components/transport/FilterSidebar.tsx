@@ -18,10 +18,6 @@ export interface FilterState {
     train: boolean;
     underground: boolean;
   };
-  stops: {
-    direct: boolean;
-    oneOrMore: boolean;
-  };
   maxTime: number;
   maxPrice: number;
   departureTime: [number, number];
@@ -53,16 +49,6 @@ export function FilterSidebar({ filters, onFiltersChange, minTimeLimit = 15, max
       transportModes: {
         ...filters.transportModes,
         [mode]: checked,
-      },
-    });
-  };
-
-  const updateStops = (type: keyof FilterState['stops'], checked: boolean) => {
-    onFiltersChange({
-      ...filters,
-      stops: {
-        ...filters.stops,
-        [type]: checked,
       },
     });
   };
@@ -111,29 +97,6 @@ export function FilterSidebar({ filters, onFiltersChange, minTimeLimit = 15, max
                 </div>
               );
             })}
-          </div>
-        </div>
-
-        {/* Stops */}
-        <div>
-          <Label className="text-sm font-medium mb-3 block">Stops</Label>
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="direct"
-                checked={filters.stops.direct}
-                onCheckedChange={(isChecked) => updateStops('direct', Boolean(isChecked))}
-              />
-              <Label htmlFor="direct" className="cursor-pointer">Direct</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="oneOrMore"
-                checked={filters.stops.oneOrMore}
-                onCheckedChange={(isChecked) => updateStops('oneOrMore', Boolean(isChecked))}
-              />
-              <Label htmlFor="oneOrMore" className="cursor-pointer">1+ stops</Label>
-            </div>
           </div>
         </div>
 

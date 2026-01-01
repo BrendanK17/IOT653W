@@ -17,6 +17,7 @@ Emit ONLY this JSON array with MULTIPLE transport options:
     "mode": "train",
     "duration": 15,
     "co2": null,
+    "url": "https://www.heathrowexpress.com/ticket-fares",
     "hasFirstClass": true,
     "stops": [
       {"stop_name":"Heathrow Terminal 5","lat":51.47,"lon":-0.4863,"currency":"GBP","prices":[{"type":"standard","amount":0}],"branch_id":"T5-branch"},
@@ -33,6 +34,7 @@ Emit ONLY this JSON array with MULTIPLE transport options:
     "mode": "train",
     "duration": 30,
     "co2": null,
+    "url": "https://tfl.gov.uk/fares/tickets",
     "hasFirstClass": false,
     "stops": [
       {"stop_name":"Reading","lat":51.3739,"lon":-0.9716,"currency":"GBP","prices":[{"type":"standard","amount":17.50}],"branch_id":"reading-branch"},
@@ -44,20 +46,20 @@ Emit ONLY this JSON array with MULTIPLE transport options:
       {"stop_name":"Langley","lat":51.5060,"lon":-0.7113,"currency":"GBP","prices":[{"type":"standard","amount":12.00}],"branch_id":"reading-branch"},
       {"stop_name":"Iver","lat":51.5166,"lon":-0.6405,"currency":"GBP","prices":[{"type":"standard","amount":11.50}],"branch_id":"reading-branch"},
       {"stop_name":"West Drayton","lat":51.5094,"lon":-0.4633,"currency":"GBP","prices":[{"type":"standard","amount":11.00}],"branch_id":"reading-branch"},
-      {"stop_name":"Heathrow Terminal 5","lat":51.47,"lon":-0.4863,"currency":"GBP","prices":[{"type":"standard","amount":10.50}],"branch_id":"terminal-T5"},
-      {"stop_name":"Heathrow Terminal 4","lat":51.459,"lon":-0.447,"currency":"GBP","prices":[{"type":"standard","amount":10.50}],"branch_id":"terminal-T4"},
-      {"stop_name":"Heathrow Terminals 2 & 3","lat":51.4706,"lon":-0.4525,"currency":"GBP","prices":[{"type":"standard","amount":10.50}],"branch_id":null},
+      {"stop_name":"Heathrow Terminal 5","lat":51.47,"lon":-0.4863,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":"terminal-T5"},
+      {"stop_name":"Heathrow Terminal 4","lat":51.459,"lon":-0.447,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":"terminal-T4"},
+      {"stop_name":"Heathrow Terminals 2 & 3","lat":51.4706,"lon":-0.4525,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
       {"stop_name":"Hayes & Harlington","lat":51.4469,"lon":-0.4325,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
-      {"stop_name":"Southall","lat":51.5083,"lon":-0.3741,"currency":"GBP","prices":[{"type":"standard","amount":8.50}],"branch_id":null},
-      {"stop_name":"Hanwell","lat":51.5172,"lon":-0.3393,"currency":"GBP","prices":[{"type":"standard","amount":8.00}],"branch_id":null},
-      {"stop_name":"West Ealing","lat":51.5055,"lon":-0.3127,"currency":"GBP","prices":[{"type":"standard","amount":7.50}],"branch_id":null},
-      {"stop_name":"Ealing Broadway","lat":51.5048,"lon":-0.3075,"currency":"GBP","prices":[{"type":"standard","amount":7.50}],"branch_id":null},
-      {"stop_name":"Acton Main Line","lat":51.5079,"lon":-0.2654,"currency":"GBP","prices":[{"type":"standard","amount":7.00}],"branch_id":null},
-      {"stop_name":"Paddington","lat":51.5165,"lon":-0.1789,"currency":"GBP","prices":[{"type":"standard","amount":6.00}],"branch_id":null},
-      {"stop_name":"Bond Street","lat":51.5138,"lon":-0.1489,"currency":"GBP","prices":[{"type":"standard","amount":5.90}],"branch_id":null},
-      {"stop_name":"Tottenham Court Road","lat":51.5301,"lon":-0.1327,"currency":"GBP","prices":[{"type":"standard","amount":5.90}],"branch_id":null},
-      {"stop_name":"Farringdon","lat":51.5184,"lon":-0.1043,"currency":"GBP","prices":[{"type":"standard","amount":5.90}],"branch_id":null},
-      {"stop_name":"Liverpool Street","lat":51.5182,"lon":-0.0824,"currency":"GBP","prices":[{"type":"standard","amount":5.90}],"branch_id":null}
+      {"stop_name":"Southall","lat":51.5083,"lon":-0.3741,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Hanwell","lat":51.5172,"lon":-0.3393,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"West Ealing","lat":51.5055,"lon":-0.3127,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Ealing Broadway","lat":51.5048,"lon":-0.3075,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Acton Main Line","lat":51.5079,"lon":-0.2654,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Paddington","lat":51.5165,"lon":-0.1789,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Bond Street","lat":51.5138,"lon":-0.1489,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Tottenham Court Road","lat":51.5301,"lon":-0.1327,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Farringdon","lat":51.5184,"lon":-0.1043,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Liverpool Street","lat":51.5182,"lon":-0.0824,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null}
     ]
   },
   {
@@ -68,6 +70,7 @@ Emit ONLY this JSON array with MULTIPLE transport options:
     "mode": "underground",
     "duration": 50,
     "co2": null,
+    "url": "https://tfl.gov.uk/fares/tickets",
     "hasFirstClass": false,
     "stops": [
       {"stop_name":"Heathrow Terminal 5","lat":51.47,"lon":-0.4863,"currency":"GBP","prices":[{"type":"peak","amount":5.90},{"type":"off_peak","amount":3.80}],"branch_id":"T5-line"},
@@ -128,6 +131,7 @@ Final Answer Schema:
       "underground", "tube", "metro", "train", "rail", "bus", "coach"
   - duration: journey time in MINUTES from airport to city center (integer)
   - co2: always null
+  - url: booking URL where users can purchase tickets (string, e.g., "https://www.heathrowexpress.com/ticket-fares")
   - hasFirstClass: boolean indicating if first class tickets are available (true or false)
   - stops: array of stop objects, LISTED IN COMPLETE ORDER, each with:
     - stop_name: station/stop name (string)

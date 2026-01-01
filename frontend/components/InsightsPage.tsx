@@ -31,8 +31,15 @@ const NewInsightsPage: React.FC<NewInsightsPageProps> = ({
 
     // Find most eco-friendly (lowest CO2)
     const ecoFriendly = transportOptions.reduce((prev, current) => {
-      const prevCo2 = prev.co2 ?? Number.MAX_VALUE;
-      const currentCo2 = current.co2 ?? Number.MAX_VALUE;
+      const getEco2Value = (co2Data: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        if (!co2Data) return Number.MAX_VALUE;
+        if (typeof co2Data === 'number') return co2Data;
+        if (co2Data.fuel_combustion?.co2e) return co2Data.fuel_combustion.co2e;
+        return Number.MAX_VALUE;
+      };
+      
+      const prevCo2 = getEco2Value(prev.co2);
+      const currentCo2 = getEco2Value(current.co2);
       return currentCo2 < prevCo2 ? current : prev;
     });
 
@@ -48,10 +55,18 @@ const NewInsightsPage: React.FC<NewInsightsPageProps> = ({
       return current.price < prev.price ? current : prev;
     });
 
+    // Get eco-friendly CO2 value
+    const getEco2Display = (co2Data: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+      if (!co2Data) return "N/A";
+      if (typeof co2Data === 'number') return `${co2Data} kg CO₂`;
+      if (co2Data.fuel_combustion?.co2e) return `${co2Data.fuel_combustion.co2e.toFixed(2)} kg CO₂`;
+      return "N/A";
+    };
+
     return {
       ecoFriendly: {
         value: ecoFriendly.name,
-        subtext: ecoFriendly.co2 ? `${ecoFriendly.co2} kg CO₂` : "N/A"
+        subtext: getEco2Display(ecoFriendly.co2)
       },
       fastest: {
         value: fastest.name,
@@ -65,8 +80,10 @@ const NewInsightsPage: React.FC<NewInsightsPageProps> = ({
   };
 
   const insights = calculateInsights();
+  
   // Prepare data for the scatter chart
   const chartData = transportOptions.map(option => ({
+    id: option.id,
     name: option.name,
     time: typeof option.duration === 'number' ? option.duration : parseInt(option.duration),
     cost: option.price,
@@ -111,7 +128,7 @@ const NewInsightsPage: React.FC<NewInsightsPageProps> = ({
             </CardHeader>
             <CardContent>
               <InsightCards metrics={insights} />
-              <ChartSection />
+              <ChartSection transportOptions={transportOptions} />
             </CardContent>
           </Card>
           <Card>

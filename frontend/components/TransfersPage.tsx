@@ -6,8 +6,15 @@ import { TransferList } from './transport/TransferList';
 import type { FilterState } from './transport/FilterSidebar';
 import { Button } from './ui/button';
 import { SearchBox, AirportDropdown, AirportOption } from './search/SearchComponents';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
-import { ChevronDown } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+
+type EmissionType = 'well_to_tank' | 'fuel_combustion';
 
 interface FareSummary {
   modes?: Record<string, {
@@ -93,6 +100,8 @@ const TransfersPage = ({
     firstClassOnly: false
   });
 
+  const [emissionType, setEmissionType] = useState<EmissionType>('fuel_combustion');
+
   // Update filter bounds when transport options change
   useEffect(() => {
     const newBounds = calculateFilterBounds();
@@ -107,16 +116,18 @@ const TransfersPage = ({
   const [activeTab, setActiveTab] = useState('best-overall');
 
   // Get full airport name for the search box
-  const getFullAirportName = (code: string): string => {
-    if (!code) return '';
+  const getFullAirportName = (airportInput: string): string => {
+    if (!airportInput) return '';
+    
+    // Extract airport code from the input (e.g., "London Heathrow (LHR)" -> "LHR")
+    const codeMatch = airportInput.match(/\(([A-Z]{3})\)/);
+    const code = codeMatch ? codeMatch[1] : airportInput;
+    
     const airport = airports.find(a => a.iata?.toUpperCase() === code.toUpperCase() || a.value?.toUpperCase() === code.toUpperCase());
     if (airport) {
-      if (airport.type === 'city_all') {
-        return `${airport.city} (ALL)`;
-      }
-      return `${airport.name || airport.city} (${airport.iata || code.toUpperCase()})`;
+      return airport.display;
     }
-    return code;
+    return airportInput;
   };
 
   const [searchValue, setSearchValue] = useState(
@@ -145,9 +156,15 @@ const TransfersPage = ({
       return aDuration - bDuration;
     }),
     'eco-friendly': [...transportOptions].sort((a, b) => {
-      // Sort all options by CO2 emissions
-      const aCo2 = typeof a.co2 === 'number' ? a.co2 : Number.MAX_VALUE;
-      const bCo2 = typeof b.co2 === 'number' ? b.co2 : Number.MAX_VALUE;
+      // Sort all options by CO2 emissions using the selected emission type
+      const getEco2Value = (co2Data: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        if (!co2Data) return Number.MAX_VALUE;
+        if (typeof co2Data === 'number') return co2Data;
+        if (co2Data[emissionType]?.co2e) return co2Data[emissionType].co2e;
+        return Number.MAX_VALUE;
+      };
+      const aCo2 = getEco2Value(a.co2);
+      const bCo2 = getEco2Value(b.co2);
       return aCo2 - bCo2;
     }),
   };
@@ -160,9 +177,10 @@ const TransfersPage = ({
     >
       {/* Secondary Header */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20 py-2">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 flex-1">
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Airport:</label>
               <div className="relative">
                 <SearchBox
                   searchQuery={searchValue}
@@ -198,13 +216,6 @@ const TransfersPage = ({
               >
                 Insights
               </Button>
-              <Button
-                variant="ghost"
-                onClick={() => onNavigate('results')}
-                className="text-gray-700 hover:bg-gray-100"
-              >
-                Back to Results
-              </Button>
             </div>
           </div>
         </div>
@@ -212,22 +223,37 @@ const TransfersPage = ({
 
       {/* Filter Tabs */}
       <div className="bg-gray-50 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-4 py-2">
-            {['best-overall', 'cheapest', 'fastest', 'eco-friendly'].map((tab) => (
-              <Button
-                key={tab}
-                variant={activeTab === tab ? "default" : "ghost"}
-                onClick={() => setActiveTab(tab)}
-                className={`${
-                  activeTab === tab 
-                    ? "bg-blue-600 text-white hover:bg-blue-700" 
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                {tab.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-              </Button>
-            ))}
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex py-4 items-center">
+            <div className="flex-1"></div>
+            <div className="flex space-x-4 items-center">
+              {['best-overall', 'cheapest', 'fastest', 'eco-friendly'].map((tab) => (
+                <Button
+                  key={tab}
+                  variant={activeTab === tab ? "default" : "ghost"}
+                  onClick={() => setActiveTab(tab)}
+                  className={`${
+                    activeTab === tab 
+                      ? "bg-blue-600 text-white hover:bg-blue-700" 
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  {tab.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                </Button>
+              ))}
+            </div>
+            <div className="flex-1 flex justify-end items-center gap-3">
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Emission Type</label>
+              <Select value={emissionType} onValueChange={(value) => setEmissionType(value as EmissionType)}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select emission type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fuel_combustion">Fuel Combustion</SelectItem>
+                  <SelectItem value="well_to_tank">Well to Tank</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
@@ -255,6 +281,7 @@ const TransfersPage = ({
               filters={filters}
               selectedAirport={selectedAirport}
               fareSummary={fareSummary}
+              emissionType={emissionType}
             />
 
             {/* Pro Tips Section */}
@@ -273,56 +300,49 @@ const TransfersPage = ({
             {/* Fare Guide Section */}
             {fareSummary && (
               <div className="mt-8">
-                <Collapsible>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full text-left">
-                    <h3 className="text-lg font-semibold">Fare Guide</h3>
-                    <ChevronDown className="h-4 w-4" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-4">
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                      {/* eslint-disable @typescript-eslint/no-explicit-any */}
-                      {fareSummary.modes && Object.entries(fareSummary.modes).map(([mode, data]: [string, unknown]) => (
-                        <div key={mode} className="mb-4 last:mb-0">
-                          <h4 className="font-medium capitalize mb-2">{mode.replace('_', ' ')}</h4>
-                          <p className="text-sm text-gray-700 mb-2">{(data as any).summary}</p>
-                          {(data as any).payment && (
+                <h3 className="text-lg font-semibold mb-4">Fare Guide</h3>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  {/* eslint-disable @typescript-eslint/no-explicit-any */}
+                  {fareSummary.modes && Object.entries(fareSummary.modes).map(([mode, data]: [string, unknown]) => (
+                    <div key={mode} className="mb-4 last:mb-0">
+                      <h4 className="font-medium capitalize mb-2">{mode.replace('_', ' ')}</h4>
+                      <p className="text-sm text-gray-700 mb-2">{(data as any).summary}</p>
+                      {(data as any).payment && (
+                        <div className="text-xs text-gray-600">
+                          {(data as any).payment.not_allowed && (data as any).payment.not_allowed.length > 0 && (
+                            <p>Not accepted: {(data as any).payment.not_allowed.join(', ')}</p>
+                          )}
+                          {(data as any).payment.allowed && (data as any).payment.allowed.length > 0 && (
+                            <p>Accepted: {(data as any).payment.allowed.join(', ')}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {/* eslint-enable @typescript-eslint/no-explicit-any */}
+                  {/* eslint-disable @typescript-eslint/no-explicit-any */}
+                  {fareSummary.airports && fareSummary.airports.terminals && Object.entries(fareSummary.airports.terminals).map(([iata, terminal]: [string, unknown]) => (
+                    <div key={iata} className="mb-4 last:mb-0">
+                      <h4 className="font-medium">{iata} Airport</h4>
+                      {(terminal as any).services && (terminal as any).services.map((service: unknown, idx: number) => (
+                        <div key={idx} className="ml-4 mt-2">
+                          <p className="text-sm font-medium">{(service as any).name}</p>
+                          {(service as any).payment && (
                             <div className="text-xs text-gray-600">
-                              {(data as any).payment.not_allowed && (data as any).payment.not_allowed.length > 0 && (
-                                <p>Not accepted: {(data as any).payment.not_allowed.join(', ')}</p>
+                              {(service as any).payment.not_allowed && (service as any).payment.not_allowed.length > 0 && (
+                                <p>Not accepted: {(service as any).payment.not_allowed.join(', ')}</p>
                               )}
-                              {(data as any).payment.allowed && (data as any).payment.allowed.length > 0 && (
-                                <p>Accepted: {(data as any).payment.allowed.join(', ')}</p>
+                              {(service as any).payment.allowed && (service as any).payment.allowed.length > 0 && (
+                                <p>Accepted: {(service as any).payment.allowed.join(', ')}</p>
                               )}
                             </div>
                           )}
                         </div>
                       ))}
-                      {/* eslint-enable @typescript-eslint/no-explicit-any */}
-                      {/* eslint-disable @typescript-eslint/no-explicit-any */}
-                      {fareSummary.airports && fareSummary.airports.terminals && Object.entries(fareSummary.airports.terminals).map(([iata, terminal]: [string, unknown]) => (
-                        <div key={iata} className="mb-4 last:mb-0">
-                          <h4 className="font-medium">{iata} Airport</h4>
-                          {(terminal as any).services && (terminal as any).services.map((service: unknown, idx: number) => (
-                            <div key={idx} className="ml-4 mt-2">
-                              <p className="text-sm font-medium">{(service as any).name}</p>
-                              {(service as any).payment && (
-                                <div className="text-xs text-gray-600">
-                                  {(service as any).payment.not_allowed && (service as any).payment.not_allowed.length > 0 && (
-                                    <p>Not accepted: {(service as any).payment.not_allowed.join(', ')}</p>
-                                  )}
-                                  {(service as any).payment.allowed && (service as any).payment.allowed.length > 0 && (
-                                    <p>Accepted: {(service as any).payment.allowed.join(', ')}</p>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                      {/* eslint-enable @typescript-eslint/no-explicit-any */}
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                  ))}
+                  {/* eslint-enable @typescript-eslint/no-explicit-any */}
+                </div>
               </div>
             )}
           </div>

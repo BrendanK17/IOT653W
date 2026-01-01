@@ -4,6 +4,8 @@ import { FilterState } from '../transport/FilterSidebar';
 import TransportCard from '../transport/TransportCard';
 import { MapOverlay } from '../transport/MapOverlay';
 
+type EmissionType = 'well_to_tank' | 'fuel_combustion';
+
 interface FareSummary {
   modes?: Record<string, {
     summary: string;
@@ -30,6 +32,7 @@ interface TransferListProps {
   filters: FilterState;
   selectedAirport: string;
   fareSummary?: FareSummary;
+  emissionType: EmissionType;
 }
 
 export function TransferList({
@@ -37,6 +40,7 @@ export function TransferList({
   filters,
   selectedAirport,
   fareSummary,
+  emissionType,
 }: TransferListProps) {
   const [selectedTransfer, setSelectedTransfer] = useState<TransportOption | null>(null);
   const airportCode = selectedAirport.match(/\(([^)]+)\)/)?.[1] || selectedAirport;
@@ -71,6 +75,7 @@ export function TransferList({
               transport={transfer}
               onShowMap={() => setSelectedTransfer(transfer)}
               fareSummary={fareSummary}
+              emissionType={emissionType}
             />
           ))}
       </div>

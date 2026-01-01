@@ -3,8 +3,16 @@ import { Badge } from "../ui/badge";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
 import { TransportOption, TransportMode } from '../../types';
-import { Train, Bus, Car, Clock, ExternalLink, Map, Leaf } from 'lucide-react';
+import { Train, Bus, Car, Clock, ExternalLink, Map, Leaf, Info } from 'lucide-react';
 import { formatDuration } from '../../utils/duration';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
+
+type EmissionType = 'well_to_tank' | 'fuel_combustion';
 
 interface FareSummary {
   modes?: Record<string, {
@@ -31,6 +39,7 @@ interface TransportCardProps {
   transport: TransportOption;
   onShowMap: () => void;
   fareSummary?: FareSummary;
+  emissionType: EmissionType;
 }
 
 const getTransportIcon = (mode: TransportMode) => {
@@ -44,9 +53,22 @@ const getTransportIcon = (mode: TransportMode) => {
   }
 };
 
+const formatConstituentGases = (gases: Record<string, number | null>) => {
+  return Object.entries(gases)
+    .filter(([, value]) => value !== null && value !== undefined)
+    .map(([key, value]) => {
+      let displayKey = key;
+      if (key === 'co2e_total') displayKey = 'CO₂e (Total)';
+      else if (key === 'co2e_other') displayKey = 'CO₂e (Other)';
+      else if (key === 'co2') displayKey = 'CO₂';
+      else if (key === 'ch4') displayKey = 'CH₄ (Methane)';
+      else if (key === 'n2o') displayKey = 'N₂O (Nitrous Oxide)';
+      
+      return `${displayKey}: ${(value as number).toFixed(6)} kg`;
+    });
+};
 
-
-export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowMap, fareSummary }) => {
+export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowMap, fareSummary, emissionType }) => {
   const getFareBadges = () => {
     if (!fareSummary || !fareSummary.modes) return [];
 
@@ -128,9 +150,37 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
               </span>
               <span>{typeof transport.stops === 'string' ? transport.stops : `${transport.stops.length} stops`}</span>
               {transport.co2 && (
-                <span className={`flex items-center ${transport.isEco ? 'text-green-600' : 'text-gray-600'}`}>
-                  <Leaf className="w-3 h-3 mr-1" />
-                  {transport.co2} kg CO₂
+                <span className={`flex items-center gap-2 ${transport.isEco ? 'text-green-600' : 'text-gray-600'}`}>
+                  <Leaf className="w-3 h-3" />
+                  {typeof transport.co2 === 'number' 
+                    ? `${transport.co2} kg CO₂`
+                    : (() => {
+                        const co2Data = transport.co2 as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+                        if (co2Data[emissionType]?.co2e) {
+                          return `${co2Data[emissionType].co2e.toFixed(2)} kg CO₂`;
+                        }
+                        return 'N/A';
+                      })()
+                  }
+                  {typeof transport.co2 !== 'number' && (transport.co2 as any)[emissionType] && ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button className="p-1 hover:bg-gray-200 rounded-full transition-colors">
+                            <Info className="w-3 h-3" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-sm">
+                          <div className="text-xs whitespace-pre-line">
+                            <p className="font-semibold mb-2">Constituent Gases:</p>
+                            {formatConstituentGases((transport.co2 as any)[emissionType].constituent_gases || {}).map((line, idx) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                              <p key={idx}>{line}</p>
+                            ))}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </span>
               )}
             </div>
@@ -146,6 +196,11 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
               variant="default"
               size="sm"
               className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => {
+                if (transport.url) {
+                  window.open(transport.url, '_blank');
+                }
+              }}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
               Book
