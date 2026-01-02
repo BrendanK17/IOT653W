@@ -69,6 +69,11 @@ export function TransferList({
             if (!filters.firstClassOnly) return true;
             return t.hasFirstClass === true;
           })
+          .sort((a, b) => {
+            if (a.sponsored && !b.sponsored) return -1;
+            if (!a.sponsored && b.sponsored) return 1;
+            return 0;
+          })
           .map((transfer) => (
             <TransportCard
               key={transfer.id}

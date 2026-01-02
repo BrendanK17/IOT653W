@@ -287,16 +287,6 @@ def api_put_transport_activity_mapping(payload: dict = Body(...)):
         if "mapping" in payload and isinstance(payload.get("mapping"), dict):
             mapping = payload["mapping"]
 
-        allowed_modes = {
-            "underground",
-            "tube",
-            "metro",
-            "train",
-            "rail",
-            "bus",
-            "coach",
-        }
-
         cleaned: dict[str, str] = {}
         for k, v in mapping.items():
             if not isinstance(k, str):
@@ -304,11 +294,6 @@ def api_put_transport_activity_mapping(payload: dict = Body(...)):
                     status_code=400, detail="mapping keys must be strings"
                 )
             key = k.strip().lower()
-            if key not in allowed_modes:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid mode '{k}'. Allowed: {sorted(allowed_modes)}",
-                )
             if not isinstance(v, str) or not v.strip():
                 raise HTTPException(
                     status_code=400,
@@ -954,19 +939,19 @@ def api_get_all_terminal_transfers():
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/airports/{iata}/sponsored-transports")
-def api_add_sponsored_transport(iata: str, transport_data: dict = Body(...)):
-    """Add a sponsored transport option for a specific airport.
+@router.post("/airports/{iata}/transports")
+def api_add_transport(iata: str, transport_data: dict = Body(...)):
+    """Add or manage a transport option for a specific airport.
     
     The transport_data should include:
-    - name: Transport service name
-    - mode: Transport mode (train, bus, coach, taxi, underground)
-    - price: Price in GBP
-    - duration: Duration in minutes or as a string
-    - route: Route description
-    - stops: Number of stops or array of stop objects
-    - co2: CO2 emissions (optional, can be null)
-    - isEco: Boolean flag for eco-friendly (optional)
+    - name: Transport service name (required)
+    - mode: Transport mode - train, bus, coach, taxi, underground (required)
+    - price: Price in GBP (required)
+    - duration: Duration in minutes or as a string (required)
+    - stops: Number of stops or array of stop objects (optional)
+    - sponsored: Boolean to mark as sponsored (optional, defaults to False)
+    - url: Booking URL (optional)
+    - Any other transport fields
     """
     try:
         iata = validate_iata(iata)
@@ -975,7 +960,7 @@ def api_add_sponsored_transport(iata: str, transport_data: dict = Body(...)):
             raise HTTPException(status_code=404, detail="Airport not found")
         
         # Validate required fields
-        required_fields = ["name", "mode", "price", "duration", "route"]
+        required_fields = ["name", "mode", "price", "duration"]
         missing_fields = [field for field in required_fields if field not in transport_data]
         if missing_fields:
             raise HTTPException(
@@ -983,19 +968,12 @@ def api_add_sponsored_transport(iata: str, transport_data: dict = Body(...)):
                 detail=f"Missing required fields: {', '.join(missing_fields)}"
             )
         
-        # Validate mode
-        allowed_modes = ["train", "bus", "coach", "taxi", "underground"]
-        if transport_data.get("mode") not in allowed_modes:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid mode. Allowed values: {', '.join(allowed_modes)}"
-            )
-        
-        # Add the sponsored transport
+        # Add the transport (sponsored flag defaults to False if not provided)
+        transport_data.setdefault("sponsored", False)
         doc_id = add_sponsored_transport(iata.upper(), transport_data)
         
         return {
-            "message": "Sponsored transport added successfully",
+            "message": "Transport added successfully",
             "iata": iata.upper(),
             "id": str(doc_id)
         }
@@ -1004,7 +982,7 @@ def api_add_sponsored_transport(iata: str, transport_data: dict = Body(...)):
     except HTTPException:
         raise
     except Exception:
-        logging.exception("Failed to add sponsored transport for %s", iata)
+        logging.exception("Failed to add transport for %s", iata)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -1020,15 +998,3 @@ def api_get_sponsored_transports(iata: str):
     except Exception:
         logging.exception("Failed to get sponsored transports for %s", iata)
         raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.get("/sponsored-transports")
-def api_get_all_sponsored_transports():
-    """Retrieve all sponsored transport options from all airports."""
-    try:
-        transports = get_all_sponsored_transports()
-        return {"transports": transports, "count": len(transports)}
-    except Exception:
-        logging.exception("Failed to get all sponsored transports")
-        raise HTTPException(status_code=500, detail="Internal server error")
-

@@ -106,7 +106,9 @@ Emit ONLY this JSON array with MULTIPLE transport options:
 
 CRITICAL REQUIREMENTS:
 1. ALWAYS include MULTIPLE transport options (at least Elizabeth Line, Piccadilly Line, Heathrow Express, and other major services for Heathrow)
-2. For routes with MULTIPLE BRANCHES (like Heathrow Express and Piccadilly Line), list each branch separately with its unique branch_id
+2. EVERY transport MUST have a "url" field with a valid booking URL (e.g., https://www.heathrowexpress.com/, https://tfl.gov.uk/fares/tickets, https://www.nationalexpress.com/)
+3. BUS FARES: If any BUS (mode: "bus") services are included, ALL bus fares MUST be £1.75 per journey. NOTE: Coaches (mode: "coach") have different fare structures and should NOT be set to £1.75
+4. For routes with MULTIPLE BRANCHES (like Heathrow Express and Piccadilly Line), list each branch separately with its unique branch_id
 3. IMPORTANT: Branches should NOT be consecutive with the same branch_id. Instead:
    - List each branch's terminal separately (e.g., T5 with branch_id "T5-branch")
    - Then list other branches (e.g., T4 with branch_id "T4-branch")

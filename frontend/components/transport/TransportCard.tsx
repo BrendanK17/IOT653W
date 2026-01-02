@@ -69,7 +69,23 @@ const formatConstituentGases = (gases: Record<string, number | null>) => {
 };
 
 export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowMap, fareSummary, emissionType }) => {
+  const hasValidStops = (() => {
+    if (!transport.stops) return false;
+    if (typeof transport.stops === 'string') {
+      const trimmed = transport.stops.trim();
+      if (!trimmed || trimmed === 'undefined' || trimmed.toLowerCase().includes('undefined')) return false;
+      return true;
+    }
+    if (Array.isArray(transport.stops) && transport.stops.length > 0) return true;
+    return false;
+  })();
+
   const getFareBadges = () => {
+    // Only show payment badges for public transport, not taxis
+    if (!['train', 'bus', 'coach', 'underground'].includes(transport.mode)) {
+      return [];
+    }
+    
     if (!fareSummary || !fareSummary.modes) return [];
 
     const modeMap: Record<string, string> = {
@@ -148,16 +164,27 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
                 <Clock className="w-4 h-4 mr-1" />
                 {formatDuration(transport.duration)}
               </span>
-              <span>{typeof transport.stops === 'string' ? transport.stops : `${transport.stops.length} stops`}</span>
+              {(() => {
+                if (!transport.stops) return null;
+                if (typeof transport.stops === 'string') {
+                  const trimmed = transport.stops.trim();
+                  if (!trimmed || trimmed === 'undefined' || trimmed.toLowerCase().includes('undefined')) return null;
+                  return <span>{transport.stops}</span>;
+                }
+                if (Array.isArray(transport.stops) && transport.stops.length > 0) {
+                  return <span>{`${transport.stops.length} stops`}</span>;
+                }
+                return null;
+              })()}
               {transport.co2 && (
                 <span className={`flex items-center gap-2 ${transport.isEco ? 'text-green-600' : 'text-gray-600'}`}>
                   <Leaf className="w-3 h-3" />
                   {typeof transport.co2 === 'number' 
-                    ? `${transport.co2} kg CO₂`
+                    ? `${transport.co2} kg CO₂e`
                     : (() => {
                         const co2Data = transport.co2 as any; // eslint-disable-line @typescript-eslint/no-explicit-any
                         if (co2Data[emissionType]?.co2e) {
-                          return `${co2Data[emissionType].co2e.toFixed(2)} kg CO₂`;
+                          return `${co2Data[emissionType].co2e.toFixed(2)} kg CO₂e`;
                         }
                         return 'N/A';
                       })()
@@ -199,21 +226,27 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
               onClick={() => {
                 if (transport.url) {
                   window.open(transport.url, '_blank');
+                } else {
+                  console.warn(`No booking URL available for ${transport.name}`);
+                  alert(`Sorry, booking is not available for ${transport.name} at this moment.`);
                 }
               }}
+              disabled={!transport.url}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
               Book
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onShowMap}
-              className="border-gray-200 text-gray-700 hover:bg-gray-50"
-            >
-              <Map className="w-4 h-4 mr-2" />
-              Map
-            </Button>
+            {hasValidStops && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onShowMap}
+                className="border-gray-200 text-gray-700 hover:bg-gray-50"
+              >
+                <Map className="w-4 h-4 mr-2" />
+                Map
+              </Button>
+            )}
           </div>
         </div>
       </div>

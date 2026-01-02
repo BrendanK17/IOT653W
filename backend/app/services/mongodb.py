@@ -3,6 +3,7 @@ from pymongo.server_api import ServerApi
 import os
 from unittest.mock import MagicMock
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 
@@ -46,9 +47,6 @@ TRANSPORT_ACTIVITY_MAPPING_COLLECTION = "transport_activity_mapping"
 
 # --- Terminal Transfers Collection ---
 TERMINAL_TRANSFERS_COLLECTION = "terminal_transfers"
-
-# --- Sponsored Transports Collection ---
-SPONSORED_TRANSPORTS_COLLECTION = "sponsored_transports"
 
 
 
@@ -337,6 +335,8 @@ def get_all_terminal_transfers():
 def add_sponsored_transport(iata: str, transport_data: dict):
     """Add a sponsored transport option for an airport.
     
+    This adds to the main airport_transports collection with the sponsored flag set to True.
+    
     Args:
         iata: Airport IATA code (e.g., 'LHR')
         transport_data: Dictionary containing transport details (name, mode, price, duration, route, stops, etc.)
@@ -344,12 +344,16 @@ def add_sponsored_transport(iata: str, transport_data: dict):
     Returns:
         The inserted document ID
     """
-    db = client[DB_NAME]
-    collection = db[SPONSORED_TRANSPORTS_COLLECTION]
+    from app.services.airport_transports import TRANSPORTS_COLLECTION
     
-    # Add sponsored flag and ensure IATA is uppercase
-    transport_data["airport"] = iata.upper()
+    db = client[DB_NAME]
+    collection = db[TRANSPORTS_COLLECTION]
+    
+    # Ensure required fields
+    transport_data["iata"] = iata.upper()
     transport_data["sponsored"] = True
+    transport_data.setdefault("created_at", datetime.utcnow())
+    transport_data["updated_at"] = datetime.utcnow()
     
     # Insert and return the result
     result = collection.insert_one(transport_data)
@@ -365,9 +369,11 @@ def get_sponsored_transports(iata: str):
     Returns:
         List of sponsored transport documents for the airport
     """
+    from app.services.airport_transports import TRANSPORTS_COLLECTION
+    
     db = client[DB_NAME]
-    collection = db[SPONSORED_TRANSPORTS_COLLECTION]
-    docs = list(collection.find({"airport": iata.upper()}, {"_id": 1}))
+    collection = db[TRANSPORTS_COLLECTION]
+    docs = list(collection.find({"iata": iata.upper(), "sponsored": True}, {"_id": 0}))
     return docs
 
 
@@ -377,8 +383,10 @@ def get_all_sponsored_transports():
     Returns:
         List of all sponsored transport documents
     """
+    from app.services.airport_transports import TRANSPORTS_COLLECTION
+    
     db = client[DB_NAME]
-    collection = db[SPONSORED_TRANSPORTS_COLLECTION]
-    docs = list(collection.find({}, {"_id": 1}).sort("airport", 1))
+    collection = db[TRANSPORTS_COLLECTION]
+    docs = list(collection.find({"sponsored": True}, {"_id": 0}).sort("iata", 1))
     return docs
 

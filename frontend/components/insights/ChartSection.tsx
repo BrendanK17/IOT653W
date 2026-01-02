@@ -78,7 +78,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({ transportOptions }) 
               <div className="flex items-center gap-4">
                 <div className="text-right min-w-24">
                   <p className="text-lg font-bold">{emission.co2e.toFixed(2)} kg</p>
-                  <p className="text-xs text-gray-500">{emission.co2e_unit}</p>
+                  <p className="text-xs text-gray-500">CO₂e</p>
                 </div>
                 <TooltipProvider>
                   <Tooltip>

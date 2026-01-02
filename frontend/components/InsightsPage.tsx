@@ -82,8 +82,8 @@ const NewInsightsPage: React.FC<NewInsightsPageProps> = ({
   const insights = calculateInsights();
   
   // Prepare data for the scatter chart
-  const chartData = transportOptions.map(option => ({
-    id: option.id,
+  const chartData = transportOptions.map((option, index) => ({
+    id: `${option.id}-${index}`, // Ensure truly unique ID
     name: option.name,
     time: typeof option.duration === 'number' ? option.duration : parseInt(option.duration),
     cost: option.price,
@@ -143,15 +143,39 @@ const NewInsightsPage: React.FC<NewInsightsPageProps> = ({
                     <XAxis dataKey="time" type="number" label={{ value: 'Duration (minutes)', position: 'insideBottomRight', offset: -10 }} />
                     <YAxis dataKey="cost" type="number" label={{ value: 'Cost (£)', angle: -90, position: 'insideLeft' }} />
                     <Tooltip cursor={{ strokeDasharray: '3 3' }} content={({ active, payload }) => {
-                      if (active && payload && payload[0]) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="bg-white p-2 border border-gray-300 rounded shadow">
-                            <p className="font-semibold">{data.name}</p>
-                            <p className="text-sm">Time: {data.time} mins</p>
-                            <p className="text-sm">Cost: £{data.cost}</p>
-                          </div>
-                        );
+                      if (active && payload && payload.length > 0) {
+                        // Deduplicate by id since each point has entries for both "time" and "cost"
+                        const uniqueMap = new Map();
+                        for (const p of payload) {
+                          if (!uniqueMap.has(p.payload.id)) {
+                            uniqueMap.set(p.payload.id, p);
+                          }
+                        }
+                        const uniquePayloads = Array.from(uniqueMap.values());
+                        
+                        // If we have multiple points, pick the one that appears most in the payload
+                        // (the actual hovered point should have more entries)
+                        let mostFrequent = uniquePayloads[0];
+                        let maxCount = 0;
+                        
+                        for (const uniqueP of uniquePayloads) {
+                          const count = payload.filter(p => p.payload.id === uniqueP.payload.id).length;
+                          if (count > maxCount) {
+                            maxCount = count;
+                            mostFrequent = uniqueP;
+                          }
+                        }
+                        
+                        const data = mostFrequent?.payload;
+                        if (data) {
+                          return (
+                            <div className="bg-white p-2 border border-gray-300 rounded shadow">
+                              <p className="font-semibold">{data.name}</p>
+                              <p className="text-sm">Time: {data.time} mins</p>
+                              <p className="text-sm">Cost: £{data.cost}</p>
+                            </div>
+                          );
+                        }
                       }
                       return null;
                     }} />

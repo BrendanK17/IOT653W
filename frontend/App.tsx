@@ -156,6 +156,7 @@ const convertTransportOptions = (options: BackendTransportOption[], airportCode:
       isBest: false,
       route: route || (option.route || ''),
       co2,
+      url: (option as any).url, // eslint-disable-line @typescript-eslint/no-explicit-any
       sponsored: (option as any).sponsored || false, // eslint-disable-line @typescript-eslint/no-explicit-any
       hasFirstClass: (option as any).hasFirstClass || false, // eslint-disable-line @typescript-eslint/no-explicit-any
     } as TransportOption;
@@ -220,24 +221,6 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
         }
         const body = await res.json().catch(() => ({}));
         let items = Array.isArray(body.transports) ? body.transports : [];
-        
-        // Fetch and merge sponsored transports
-        try {
-          const sponsoredRes = await fetch(`${API_BASE}/airports/${code}/sponsored-transports`, {
-            headers: {
-              'X-Requested-By': 'GroundScanner-Frontend',
-            },
-          });
-          if (sponsoredRes.ok) {
-            const sponsoredBody = await sponsoredRes.json().catch(() => ({}));
-            const sponsoredItems = Array.isArray(sponsoredBody.transports) ? sponsoredBody.transports : [];
-            // Merge sponsored transports with regular ones
-            items = [...items, ...sponsoredItems];
-          }
-        } catch (e) {
-          // If sponsored transports fail to load, just continue with regular transports
-          console.warn('Failed to load sponsored transports:', e);
-        }
         
         if (mounted) setTransportOptionsState(convertTransportOptions(items, code));
       } catch (e) {
@@ -394,22 +377,6 @@ const InsightsPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; ai
         }
         const body = await res.json().catch(() => ({}));
         let items = Array.isArray(body.transports) ? body.transports : [];
-        
-        // Fetch and merge sponsored transports
-        try {
-          const sponsoredRes = await fetch(`${API_BASE}/airports/${code}/sponsored-transports`, {
-            headers: {
-              'X-Requested-By': 'GroundScanner-Frontend',
-            },
-          });
-          if (sponsoredRes.ok) {
-            const sponsoredBody = await sponsoredRes.json().catch(() => ({}));
-            const sponsoredItems = Array.isArray(sponsoredBody.transports) ? sponsoredBody.transports : [];
-            items = [...items, ...sponsoredItems];
-          }
-        } catch (e) {
-          console.warn('Failed to load sponsored transports:', e);
-        }
         
         if (mounted) setTransportOptionsState(convertTransportOptions(items, code));
       } catch (e) {
