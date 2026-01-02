@@ -108,10 +108,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 # External Services
 TAVILY_API_KEY=your-tavily-api-key
 CLIMATIQ_API_KEY=your-climatiq-api-key
-
-# LLM Configuration
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=mistral
+OLLAMA_API_KEY=your-ollama-api-key
 ```
 
 **Important Security Notes**:
@@ -200,10 +197,9 @@ For detailed parameter documentation, visit the Swagger UI at `/docs`
    - Local: `mongodb://localhost:27017`
    - Atlas: Update `MONGODB_URL` in `.env`
 
-2. **Ollama** (Optional) - Local LLM for recommendations
-   - Download: https://ollama.ai/
-   - Model: `mistral` (configurable)
-   - URL: `http://localhost:11434` (default)
+2. **Ollama** (Optional) - LLM service for recommendations
+   - Cloud service: https://ollama.com/
+   - Set `OLLAMA_API_KEY` in `.env`
    - Features: Airport suggestions, fare analysis, recommendations
 
 ### Optional APIs
