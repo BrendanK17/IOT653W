@@ -80,17 +80,18 @@ export const HomePage: React.FC<HomePageProps> = ({
         className="relative backdrop-blur-sm bg-white/80 border-b border-white/20 shadow-sm"
       />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-20 pb-12">
-        <div className="text-center mb-8 sm:mb-12">
-          <h2 className="text-3xl sm:text-5xl font-bold mb-4 text-white">
-            Compare your best route from the airport to the city
-          </h2>
-          <p className="text-lg sm:text-xl text-white/90">
-            Find the cheapest, fastest, and most sustainable airport transfers
-          </p>
-        </div>
+      <main className="w-full px-4 sm:px-6 lg:px-8 pt-12 sm:pt-20 pb-12">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-3xl sm:text-5xl font-bold mb-4 text-white">
+              Compare your best route from the airport to the city
+            </h2>
+            <p className="text-lg sm:text-xl text-white/90">
+              Find the cheapest, fastest, and most sustainable airport transfers
+            </p>
+          </div>
 
-        <Card className="max-w-2xl mx-auto mb-8 shadow-2xl bg-white/95 border-white/20 z-10">
+          <Card className="max-w-2xl mx-auto mb-8 shadow-2xl bg-white/95 border-white/20 z-10">
           <div className="p-4 sm:p-6 space-y-4">
             <div className="relative">
               <SearchBox
@@ -141,20 +142,21 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
         </Card>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-8 sm:mt-12">
-          {[
-            { icon: Leaf, title: 'Eco-Friendly Options', desc: 'Compare sustainable transport methods', color: 'bg-teal-500' },
-            { icon: Clock, title: 'Real-Time Pricing', desc: 'Always get the most current prices', color: 'bg-blue-500' },
-            { icon: Star, title: 'Best Route', desc: 'AI-powered recommendations', color: 'bg-orange-500' },
-          ].map((item, idx) => (
-            <Card key={idx} className="text-center p-4 sm:p-6 bg-white/95 hover:bg-white transition-all shadow-lg border-white/20 z-0">
-              <div className={`w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center ${item.color}`}>
-                <item.icon className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="font-bold mb-2">{item.title}</h3>
-              <p className="text-sm text-muted-foreground">{item.desc}</p>
-            </Card>
-          ))}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-8 sm:mt-12">
+            {[
+              { icon: Leaf, title: 'Eco-Friendly Options', desc: 'Compare sustainable transport methods', color: 'bg-teal-500' },
+              { icon: Clock, title: 'Real-Time Pricing', desc: 'Always get the most current prices', color: 'bg-blue-500' },
+              { icon: Star, title: 'Best Route', desc: 'AI-powered recommendations', color: 'bg-orange-500' },
+            ].map((item, idx) => (
+              <Card key={idx} className="text-center p-4 sm:p-6 bg-white/95 hover:bg-white transition-all shadow-lg border-white/20 z-0">
+                <div className={`w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center ${item.color}`}>
+                  <item.icon className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-bold mb-2">{item.title}</h3>
+                <p className="text-sm text-muted-foreground">{item.desc}</p>
+              </Card>
+            ))}
+          </div>
         </div>
       </main>
     </div>

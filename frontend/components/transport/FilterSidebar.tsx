@@ -1,8 +1,14 @@
-import { Car, Bus, Train, Clock, PoundSterling } from 'lucide-react';
+import { Car, Bus, Train, Clock, PoundSterling, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Checkbox } from '../ui/checkbox';
 import { Slider } from '../ui/slider';
 import { Label } from '../ui/label';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
 
 export interface FilterState {
   transportModes: {
@@ -11,10 +17,6 @@ export interface FilterState {
     coach: boolean;
     train: boolean;
     underground: boolean;
-  };
-  stops: {
-    direct: boolean;
-    oneOrMore: boolean;
   };
   maxTime: number;
   maxPrice: number;
@@ -26,6 +28,10 @@ export interface FilterState {
 interface FilterSidebarProps {
   filters: FilterState;
   onFiltersChange: (filters: FilterState) => void;
+  minTimeLimit?: number;
+  maxTimeLimit?: number;
+  minPriceLimit?: number;
+  maxPriceLimit?: number;
 }
 
 const transportModeIcons = {
@@ -36,23 +42,13 @@ const transportModeIcons = {
   underground: Train,
 };
 
-export function FilterSidebar({ filters, onFiltersChange }: FilterSidebarProps) {
+export function FilterSidebar({ filters, onFiltersChange, minTimeLimit = 15, maxTimeLimit = 180, minPriceLimit = 5, maxPriceLimit = 200 }: FilterSidebarProps) {
   const updateTransportMode = (mode: keyof FilterState['transportModes'], checked: boolean) => {
     onFiltersChange({
       ...filters,
       transportModes: {
         ...filters.transportModes,
         [mode]: checked,
-      },
-    });
-  };
-
-  const updateStops = (type: keyof FilterState['stops'], checked: boolean) => {
-    onFiltersChange({
-      ...filters,
-      stops: {
-        ...filters.stops,
-        [type]: checked,
       },
     });
   };
@@ -104,29 +100,6 @@ export function FilterSidebar({ filters, onFiltersChange }: FilterSidebarProps) 
           </div>
         </div>
 
-        {/* Stops */}
-        <div>
-          <Label className="text-sm font-medium mb-3 block">Stops</Label>
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="direct"
-                checked={filters.stops.direct}
-                onCheckedChange={(isChecked) => updateStops('direct', Boolean(isChecked))}
-              />
-              <Label htmlFor="direct" className="cursor-pointer">Direct</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="oneOrMore"
-                checked={filters.stops.oneOrMore}
-                onCheckedChange={(isChecked) => updateStops('oneOrMore', Boolean(isChecked))}
-              />
-              <Label htmlFor="oneOrMore" className="cursor-pointer">1+ stops</Label>
-            </div>
-          </div>
-        </div>
-
         {/* Maximum Time */}
         <div>
           <Label className="text-sm font-medium mb-3 block flex items-center gap-2">
@@ -136,14 +109,14 @@ export function FilterSidebar({ filters, onFiltersChange }: FilterSidebarProps) 
           <Slider
             value={[filters.maxTime]}
             onValueChange={updateMaxTime}
-            max={180}
-            min={15}
+            max={maxTimeLimit}
+            min={minTimeLimit}
             step={15}
             className="w-full"
           />
           <div className="flex justify-between text-xs text-gray-500 mt-1">
-            <span>15 mins</span>
-            <span>3 hours</span>
+            <span>{minTimeLimit} mins</span>
+            <span>{maxTimeLimit} mins</span>
           </div>
         </div>
 
@@ -156,14 +129,14 @@ export function FilterSidebar({ filters, onFiltersChange }: FilterSidebarProps) 
           <Slider
             value={[filters.maxPrice]}
             onValueChange={updateMaxPrice}
-            max={150}
-            min={5}
+            max={maxPriceLimit}
+            min={minPriceLimit}
             step={5}
             className="w-full"
           />
           <div className="flex justify-between text-xs text-gray-500 mt-1">
-            <span>£5</span>
-            <span>£150</span>
+            <span>£{minPriceLimit}</span>
+            <span>£{maxPriceLimit}</span>
           </div>
         </div>
 
@@ -191,7 +164,19 @@ export function FilterSidebar({ filters, onFiltersChange }: FilterSidebarProps) 
                   onFiltersChange({ ...filters, firstClassOnly: Boolean(isChecked) })
                 }
               />
-              <Label htmlFor="firstClass" className="cursor-pointer">First class</Label>
+              <Label htmlFor="firstClass" className="cursor-pointer flex items-center gap-2">
+                First class
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-gray-500 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-sm">Prices displayed may not be accurate for first class tickets</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </Label>
             </div>
           </div>
         </div>

@@ -3,8 +3,16 @@ import { Badge } from "../ui/badge";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
 import { TransportOption, TransportMode } from '../../types';
-import { Train, Bus, Car, Clock, ExternalLink, Map, Leaf } from 'lucide-react';
+import { Train, Bus, Car, Clock, ExternalLink, Map, Leaf, Info } from 'lucide-react';
 import { formatDuration } from '../../utils/duration';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
+
+type EmissionType = 'well_to_tank' | 'fuel_combustion';
 
 interface FareSummary {
   modes?: Record<string, {
@@ -31,6 +39,7 @@ interface TransportCardProps {
   transport: TransportOption;
   onShowMap: () => void;
   fareSummary?: FareSummary;
+  emissionType: EmissionType;
 }
 
 const getTransportIcon = (mode: TransportMode) => {
@@ -44,10 +53,39 @@ const getTransportIcon = (mode: TransportMode) => {
   }
 };
 
+const formatConstituentGases = (gases: Record<string, number | null>) => {
+  return Object.entries(gases)
+    .filter(([, value]) => value !== null && value !== undefined)
+    .map(([key, value]) => {
+      let displayKey = key;
+      if (key === 'co2e_total') displayKey = 'CO₂e (Total)';
+      else if (key === 'co2e_other') displayKey = 'CO₂e (Other)';
+      else if (key === 'co2') displayKey = 'CO₂';
+      else if (key === 'ch4') displayKey = 'CH₄ (Methane)';
+      else if (key === 'n2o') displayKey = 'N₂O (Nitrous Oxide)';
+      
+      return `${displayKey}: ${(value as number).toFixed(6)} kg`;
+    });
+};
 
+export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowMap, fareSummary, emissionType }) => {
+  const hasValidStops = (() => {
+    if (!transport.stops) return false;
+    if (typeof transport.stops === 'string') {
+      const trimmed = transport.stops.trim();
+      if (!trimmed || trimmed === 'undefined' || trimmed.toLowerCase().includes('undefined')) return false;
+      return true;
+    }
+    if (Array.isArray(transport.stops) && transport.stops.length > 0) return true;
+    return false;
+  })();
 
-export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowMap, fareSummary }) => {
   const getFareBadges = () => {
+    // Only show payment badges for public transport, not taxis
+    if (!['train', 'bus', 'coach', 'underground'].includes(transport.mode)) {
+      return [];
+    }
+    
     if (!fareSummary || !fareSummary.modes) return [];
 
     const modeMap: Record<string, string> = {
@@ -99,9 +137,19 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
   };
 
   return (
-    <Card className="p-4 sm:p-6 hover:shadow-lg transition-shadow bg-white border border-gray-200">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-        <div className="flex items-start space-x-3 sm:space-x-4 flex-1 min-w-0">
+    <div>
+      {/* Sponsored indicator bar */}
+      {transport.sponsored && (
+        <div className="bg-gradient-to-r from-amber-400 to-yellow-300 text-gray-900 font-bold px-4 py-2 rounded-t-lg border-b-2 border-amber-500 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">⭐</span>
+            <span>Sponsored</span>
+          </div>
+        </div>
+      )}
+      <Card className={`w-full p-4 sm:p-6 hover:shadow-lg transition-shadow bg-white ${transport.sponsored ? 'border-2 border-amber-300 rounded-b-lg' : 'border border-gray-200'}`}>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          <div className="flex items-start space-x-3 sm:space-x-4 flex-1 min-w-0">
           <div className="p-2 rounded-lg bg-blue-50 shrink-0">
             {getTransportIcon(transport.mode)}
           </div>
@@ -116,11 +164,50 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
                 <Clock className="w-4 h-4 mr-1" />
                 {formatDuration(transport.duration)}
               </span>
-              <span>{typeof transport.stops === 'string' ? transport.stops : `${transport.stops.length} stops`}</span>
+              {(() => {
+                if (!transport.stops) return null;
+                if (typeof transport.stops === 'string') {
+                  const trimmed = transport.stops.trim();
+                  if (!trimmed || trimmed === 'undefined' || trimmed.toLowerCase().includes('undefined')) return null;
+                  return <span>{transport.stops}</span>;
+                }
+                if (Array.isArray(transport.stops) && transport.stops.length > 0) {
+                  return <span>{`${transport.stops.length} stops`}</span>;
+                }
+                return null;
+              })()}
               {transport.co2 && (
-                <span className={`flex items-center ${transport.isEco ? 'text-green-600' : 'text-gray-600'}`}>
-                  <Leaf className="w-3 h-3 mr-1" />
-                  {transport.co2} kg CO₂
+                <span className={`flex items-center gap-2 ${transport.isEco ? 'text-green-600' : 'text-gray-600'}`}>
+                  <Leaf className="w-3 h-3" />
+                  {typeof transport.co2 === 'number' 
+                    ? `${transport.co2} kg CO₂e`
+                    : (() => {
+                        const co2Data = transport.co2 as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+                        if (co2Data[emissionType]?.co2e) {
+                          return `${co2Data[emissionType].co2e.toFixed(2)} kg CO₂e`;
+                        }
+                        return 'N/A';
+                      })()
+                  }
+                  {typeof transport.co2 !== 'number' && (transport.co2 as any)[emissionType] && ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button className="p-1 hover:bg-gray-200 rounded-full transition-colors">
+                            <Info className="w-3 h-3" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-sm">
+                          <div className="text-xs whitespace-pre-line">
+                            <p className="font-semibold mb-2">Constituent Gases:</p>
+                            {formatConstituentGases((transport.co2 as any)[emissionType].constituent_gases || {}).map((line, idx) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                              <p key={idx}>{line}</p>
+                            ))}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </span>
               )}
             </div>
@@ -136,23 +223,35 @@ export const TransportCard: React.FC<TransportCardProps> = ({ transport, onShowM
               variant="default"
               size="sm"
               className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => {
+                if (transport.url) {
+                  window.open(transport.url, '_blank');
+                } else {
+                  console.warn(`No booking URL available for ${transport.name}`);
+                  alert(`Sorry, booking is not available for ${transport.name} at this moment.`);
+                }
+              }}
+              disabled={!transport.url}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
               Book
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onShowMap}
-              className="border-gray-200 text-gray-700 hover:bg-gray-50"
-            >
-              <Map className="w-4 h-4 mr-2" />
-              Map
-            </Button>
+            {hasValidStops && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onShowMap}
+                className="border-gray-200 text-gray-700 hover:bg-gray-50"
+              >
+                <Map className="w-4 h-4 mr-2" />
+                Map
+              </Button>
+            )}
           </div>
         </div>
       </div>
     </Card>
+    </div>
   );
 };
 

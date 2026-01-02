@@ -13,6 +13,61 @@ TRANSPORTS_COLLECTION = "airport_transports"
 TRANSPORT_PROMPT_LOG_COLLECTION = "airport_transports_prompts"
 
 
+def _format_price(price: Any) -> float:
+    """Format price to either 0dp (whole number) or 2dp.
+    
+    If price is a whole number or ends in .0, return as integer.
+    Otherwise, round to 2 decimal places.
+    """
+    if price is None:
+        return 0
+    
+    try:
+        num = float(price)
+    except (TypeError, ValueError):
+        return 0
+    
+    # Check if it's a whole number
+    if num == int(num):
+        return float(int(num))
+    
+    # Otherwise round to 2 decimal places
+    return round(num, 2)
+
+
+def _format_transport_prices(transport: Dict[str, Any]) -> Dict[str, Any]:
+    """Recursively format all prices in a transport object to 0dp or 2dp."""
+    if not isinstance(transport, dict):
+        return transport
+    
+    result = transport.copy()
+    
+    # Format prices in stops
+    if "stops" in result and isinstance(result["stops"], list):
+        formatted_stops = []
+        for stop in result["stops"]:
+            if isinstance(stop, dict):
+                stop_copy = stop.copy()
+                if "prices" in stop_copy and isinstance(stop_copy["prices"], list):
+                    formatted_prices = []
+                    for price_obj in stop_copy["prices"]:
+                        if isinstance(price_obj, dict):
+                            price_copy = price_obj.copy()
+                            if "amount" in price_copy:
+                                price_copy["amount"] = _format_price(price_copy["amount"])
+                            formatted_prices.append(price_copy)
+                        else:
+                            formatted_prices.append(price_obj)
+                    stop_copy["prices"] = formatted_prices
+                formatted_stops.append(stop_copy)
+            else:
+                formatted_stops.append(stop)
+        result["stops"] = formatted_stops
+    
+    return result
+
+
+
 def get_db():
     return client[DB_NAME]
 
@@ -21,7 +76,34 @@ def get_transports_for_airport(iata: str) -> List[Dict[str, Any]]:
     db = get_db()
     col = db[TRANSPORTS_COLLECTION]
     docs = list(col.find({"iata": iata.upper()}, {"_id": 0}))
-    return docs
+    # Format all prices in the results
+    formatted = [_format_transport_prices(doc) for doc in docs]
+    # Ensure all required fields are present
+    return [_ensure_transport_fields(doc) for doc in formatted]
+
+
+def _ensure_transport_fields(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """Ensure a transport document has all required fields, adding defaults if missing."""
+    # Simply pass through all fields as-is, including url
+    result = {**doc}
+    
+    # Ensure sponsored flag is present
+    if "sponsored" not in result:
+        result["sponsored"] = False
+    
+    # Calculate price from stops only if not present
+    if "price" not in result or result["price"] is None:
+        price = None
+        if "stops" in result and isinstance(result["stops"], list) and len(result["stops"]) > 0:
+            last_stop = result["stops"][-1]
+            if "prices" in last_stop and isinstance(last_stop["prices"], list):
+                for price_obj in last_stop["prices"]:
+                    if isinstance(price_obj, dict) and "amount" in price_obj:
+                        price = price_obj["amount"]
+                        break
+        result["price"] = price
+    
+    return result
 
 
 def replace_transports_for_airport(iata: str, docs: List[Dict[str, Any]]):

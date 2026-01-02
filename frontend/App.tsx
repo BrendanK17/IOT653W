@@ -81,19 +81,44 @@ const convertTransportOptions = (options: BackendTransportOption[], airportCode:
     // Support backend shape: option.stops is an array of stops with prices
     const backendStops = Array.isArray(option.stops) ? option.stops : undefined;
 
-    // compute price: pick minimum positive price from stops/prices, or fallback to option.price
+    // compute price: for city center, use Liverpool Street (Elizabeth Line, Piccadilly Line), 
+    // or Paddington (Heathrow Express), otherwise pick last stop or minimum positive price
     let price = 0;
     if (backendStops && backendStops.length) {
       const amounts: number[] = [];
+      let centralPrice: number | null = null;
+      
+      // Look for central stops: Liverpool Street (Zone 1 for Elizabeth/Piccadilly), Paddington (for Heathrow Express)
       for (const s of backendStops) {
+        const stopName = (s as any)?.stop_name || ''; // eslint-disable-line @typescript-eslint/no-explicit-any
         if (Array.isArray((s as any).prices)) { // eslint-disable-line @typescript-eslint/no-explicit-any
           for (const p of (s as any).prices) { // eslint-disable-line @typescript-eslint/no-explicit-any
             const a = Number(p?.amount);
-            if (!Number.isNaN(a) && a > 0) amounts.push(a);
+            if (!Number.isNaN(a) && a > 0) {
+              amounts.push(a);
+              // Check if this is a central stop
+              if (stopName.includes('Liverpool Street') || stopName.includes('Paddington')) {
+                centralPrice = a;
+              }
+            }
           }
         }
       }
-      if (amounts.length) price = Math.min(...amounts);
+      
+      // Use central price if found, otherwise use last stop, otherwise use minimum
+      if (centralPrice !== null) {
+        price = centralPrice;
+      } else if (amounts.length) {
+        // Use last stop price
+        const lastStop = backendStops[backendStops.length - 1];
+        if (Array.isArray((lastStop as any).prices)) { // eslint-disable-line @typescript-eslint/no-explicit-any
+          const lastPrice = (lastStop as any).prices[0]?.amount; // eslint-disable-line @typescript-eslint/no-explicit-any
+          if (lastPrice) {
+            price = Number(lastPrice);
+          }
+        }
+        if (!price) price = Math.min(...amounts);
+      }
     }
     if (!price && typeof option.price === 'number' && option.price > 0) price = option.price;
 
@@ -110,15 +135,15 @@ const convertTransportOptions = (options: BackendTransportOption[], airportCode:
       route = `${option.name || ''} → ${(last as any)?.stop_name || ''}`.trim(); // eslint-disable-line @typescript-eslint/no-explicit-any
     }
 
-    // co2: backend may have null
-    const co2 = (option.co2 === null || option.co2 === undefined) ? null : Number(option.co2) || 0;
+    // co2: preserve the full CO2 data structure from backend if available, otherwise use number
+    const co2 = (option as any).co2 || null; // eslint-disable-line @typescript-eslint/no-explicit-any
 
     // simple heuristics for flags
     const mode = mapMode(option.mode || option.type || 'train');
     const isEco = mode !== 'taxi';
 
     return {
-      id: `${airportCode}-${index + 1}`,
+      id: (option as any).id || `${airportCode}-${index + 1}`, // eslint-disable-line @typescript-eslint/no-explicit-any
       mode,
       name: option.name || option.route || `${option.mode || 'Transport'}`,
       airport: airportCode,
@@ -131,6 +156,9 @@ const convertTransportOptions = (options: BackendTransportOption[], airportCode:
       isBest: false,
       route: route || (option.route || ''),
       co2,
+      url: (option as any).url, // eslint-disable-line @typescript-eslint/no-explicit-any
+      sponsored: (option as any).sponsored || false, // eslint-disable-line @typescript-eslint/no-explicit-any
+      hasFirstClass: (option as any).hasFirstClass || false, // eslint-disable-line @typescript-eslint/no-explicit-any
     } as TransportOption;
   });
 };
@@ -146,25 +174,13 @@ const getAirportNameFromCode = (code: string, airportOptionsList?: AirportOption
     // Try to match by IATA code first
     const byIata = airportOptionsList.find(o => o.iata && o.iata.toUpperCase() === upperCode);
     if (byIata) {
-      if (byIata.type === 'city_all') {
-        return `${byIata.city} (ALL)`;
-      }
-      const city = byIata.city || '';
-      const name = (byIata.name || '').replace(' Airport', '');
-      const codeToShow = byIata.iata || (byIata.value || upperCode);
-      return `${city ? city + ' ' : ''}${name} (${codeToShow})`.trim();
+      return byIata.display;
     }
 
     // If not matched by iata, try the `value` field (used for some city/all entries)
     const byValue = airportOptionsList.find(o => (o.value || '').toUpperCase() === upperCode);
     if (byValue) {
-      if (byValue.type === 'city_all') {
-        return `${byValue.city} (ALL)`;
-      }
-      const city = byValue.city || '';
-      const name = (byValue.name || '').replace(' Airport', '');
-      const codeToShow = byValue.iata || (byValue.value || upperCode);
-      return `${city ? city + ' ' : ''}${name} (${codeToShow})`.trim();
+      return byValue.display;
     }
   }
 
@@ -204,7 +220,8 @@ const TransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; a
           return;
         }
         const body = await res.json().catch(() => ({}));
-        const items = Array.isArray(body.transports) ? body.transports : [];
+        let items = Array.isArray(body.transports) ? body.transports : [];
+        
         if (mounted) setTransportOptionsState(convertTransportOptions(items, code));
       } catch (e) {
         if (mounted) setTransportOptionsState([]);
@@ -328,6 +345,7 @@ const TerminalTransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: bo
       isLoggedIn={isLoggedIn}
       onNavigate={handleNavigate}
       selectedAirport={airportName}
+      airports={airports}
     />
   );
 };
@@ -336,6 +354,38 @@ const TerminalTransfersPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: bo
 const InsightsPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; airports: AirportOption[] }) => {
   const { airportCode } = useParams<{ airportCode: string }>();
   const navigate = useNavigate();
+  const [transportOptionsState, setTransportOptionsState] = useState<TransportOption[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      if (!airportCode) {
+        setTransportOptionsState([]);
+        return;
+      }
+      const code = airportCode.toUpperCase();
+      const passengers = '1';
+      try {
+        const res = await fetch(`${API_BASE}/airports/${code}/transports?passengers=${passengers}`, {
+          headers: {
+            'X-Requested-By': 'GroundScanner-Frontend',
+          },
+        });
+        if (!res.ok) {
+          if (mounted) setTransportOptionsState([]);
+          return;
+        }
+        const body = await res.json().catch(() => ({}));
+        let items = Array.isArray(body.transports) ? body.transports : [];
+        
+        if (mounted) setTransportOptionsState(convertTransportOptions(items, code));
+      } catch (e) {
+        if (mounted) setTransportOptionsState([]);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, [airportCode]);
 
   const airportName = getAirportNameFromCode(airportCode || '', airports);
 
@@ -372,17 +422,11 @@ const InsightsPageWrapper = ({ isLoggedIn, airports }: { isLoggedIn: boolean; ai
     }
   };
 
-  const handleDarkModeChange = (value: boolean) => {
-    // For now, just log - in a real app this would update global state
-    console.log('Dark mode changed:', value);
-  };
-
   return (
     <NewInsightsPage
-      darkMode={false} // Default to light mode for now
       isLoggedIn={isLoggedIn}
-      onDarkModeChange={handleDarkModeChange}
       onNavigate={handleNavigate}
+      transportOptions={transportOptionsState}
     />
   );
 };
@@ -561,16 +605,23 @@ function App() {
         const docs: BackendAirport[] = body.airports || [];
 
         // build airport option objects
-        const options: AirportOption[] = docs.map((d, idx) => ({
-          id: d.iata || `${d.name}-${idx}`,
-          display: `${d.name} (${d.iata || ''})`.trim(),
-          value: d.iata ? d.iata.toUpperCase() : (d.city || '').replace(/[^A-Za-z]/g, '').slice(0,3).toUpperCase(),
-          type: d.iata ? 'airport' : 'airport',
-          iata: d.iata ? d.iata.toUpperCase() : null,
-          name: d.name,
-          city: d.city,
-          aliases: d.aliases || [],
-        }));
+        const options: AirportOption[] = docs.map((d, idx) => {
+          // Use first alias if available, otherwise construct from city + name
+          const displayName = d.aliases && d.aliases.length > 0 
+            ? d.aliases[0] 
+            : `${d.city ? d.city + ' ' : ''}${d.name || ''}`.trim();
+          
+          return {
+            id: d.iata || `${d.name}-${idx}`,
+            display: displayName + (d.iata ? ` (${d.iata})` : ''),
+            value: d.iata ? d.iata.toUpperCase() : (d.city || '').replace(/[^A-Za-z]/g, '').slice(0,3).toUpperCase(),
+            type: d.iata ? 'airport' : 'airport',
+            iata: d.iata ? d.iata.toUpperCase() : null,
+            name: d.name,
+            city: d.city,
+            aliases: d.aliases || [],
+          };
+        });
 
         // create city (ALL) entries for cities with multiple airports
         const cityMap: Record<string, AirportOption[]> = {};
@@ -652,10 +703,9 @@ function App() {
             case 'insights':
               return (
                 <NewInsightsPage
-                  darkMode={appState.darkMode}
                   isLoggedIn={userState.isLoggedIn}
-                  onDarkModeChange={handleDarkModeChange}
                   onNavigate={handleNavigate}
+                  transportOptions={appState.transportOptions}
                 />
               );
 

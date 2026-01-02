@@ -17,6 +17,8 @@ Emit ONLY this JSON array with MULTIPLE transport options:
     "mode": "train",
     "duration": 15,
     "co2": null,
+    "url": "https://www.heathrowexpress.com/ticket-fares",
+    "hasFirstClass": true,
     "stops": [
       {"stop_name":"Heathrow Terminal 5","lat":51.47,"lon":-0.4863,"currency":"GBP","prices":[{"type":"standard","amount":0}],"branch_id":"T5-branch"},
       {"stop_name":"Heathrow Terminal 4","lat":51.459,"lon":-0.447,"currency":"GBP","prices":[{"type":"standard","amount":0}],"branch_id":"T4-branch"},
@@ -32,6 +34,8 @@ Emit ONLY this JSON array with MULTIPLE transport options:
     "mode": "train",
     "duration": 30,
     "co2": null,
+    "url": "https://tfl.gov.uk/fares/tickets",
+    "hasFirstClass": false,
     "stops": [
       {"stop_name":"Reading","lat":51.3739,"lon":-0.9716,"currency":"GBP","prices":[{"type":"standard","amount":17.50}],"branch_id":"reading-branch"},
       {"stop_name":"Twyford","lat":51.4124,"lon":-0.8299,"currency":"GBP","prices":[{"type":"standard","amount":15.50}],"branch_id":"reading-branch"},
@@ -42,20 +46,20 @@ Emit ONLY this JSON array with MULTIPLE transport options:
       {"stop_name":"Langley","lat":51.5060,"lon":-0.7113,"currency":"GBP","prices":[{"type":"standard","amount":12.00}],"branch_id":"reading-branch"},
       {"stop_name":"Iver","lat":51.5166,"lon":-0.6405,"currency":"GBP","prices":[{"type":"standard","amount":11.50}],"branch_id":"reading-branch"},
       {"stop_name":"West Drayton","lat":51.5094,"lon":-0.4633,"currency":"GBP","prices":[{"type":"standard","amount":11.00}],"branch_id":"reading-branch"},
-      {"stop_name":"Heathrow Terminal 5","lat":51.47,"lon":-0.4863,"currency":"GBP","prices":[{"type":"standard","amount":10.50}],"branch_id":"terminal-T5"},
-      {"stop_name":"Heathrow Terminal 4","lat":51.459,"lon":-0.447,"currency":"GBP","prices":[{"type":"standard","amount":10.50}],"branch_id":"terminal-T4"},
-      {"stop_name":"Heathrow Terminals 2 & 3","lat":51.4706,"lon":-0.4525,"currency":"GBP","prices":[{"type":"standard","amount":10.50}],"branch_id":null},
+      {"stop_name":"Heathrow Terminal 5","lat":51.47,"lon":-0.4863,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":"terminal-T5"},
+      {"stop_name":"Heathrow Terminal 4","lat":51.459,"lon":-0.447,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":"terminal-T4"},
+      {"stop_name":"Heathrow Terminals 2 & 3","lat":51.4706,"lon":-0.4525,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
       {"stop_name":"Hayes & Harlington","lat":51.4469,"lon":-0.4325,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
-      {"stop_name":"Southall","lat":51.5083,"lon":-0.3741,"currency":"GBP","prices":[{"type":"standard","amount":8.50}],"branch_id":null},
-      {"stop_name":"Hanwell","lat":51.5172,"lon":-0.3393,"currency":"GBP","prices":[{"type":"standard","amount":8.00}],"branch_id":null},
-      {"stop_name":"West Ealing","lat":51.5055,"lon":-0.3127,"currency":"GBP","prices":[{"type":"standard","amount":7.50}],"branch_id":null},
-      {"stop_name":"Ealing Broadway","lat":51.5048,"lon":-0.3075,"currency":"GBP","prices":[{"type":"standard","amount":7.50}],"branch_id":null},
-      {"stop_name":"Acton Main Line","lat":51.5079,"lon":-0.2654,"currency":"GBP","prices":[{"type":"standard","amount":7.00}],"branch_id":null},
-      {"stop_name":"Paddington","lat":51.5165,"lon":-0.1789,"currency":"GBP","prices":[{"type":"standard","amount":6.00}],"branch_id":null},
-      {"stop_name":"Bond Street","lat":51.5138,"lon":-0.1489,"currency":"GBP","prices":[{"type":"standard","amount":5.90}],"branch_id":null},
-      {"stop_name":"Tottenham Court Road","lat":51.5301,"lon":-0.1327,"currency":"GBP","prices":[{"type":"standard","amount":5.90}],"branch_id":null},
-      {"stop_name":"Farringdon","lat":51.5184,"lon":-0.1043,"currency":"GBP","prices":[{"type":"standard","amount":5.90}],"branch_id":null},
-      {"stop_name":"Liverpool Street","lat":51.5182,"lon":-0.0824,"currency":"GBP","prices":[{"type":"standard","amount":5.90}],"branch_id":null}
+      {"stop_name":"Southall","lat":51.5083,"lon":-0.3741,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Hanwell","lat":51.5172,"lon":-0.3393,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"West Ealing","lat":51.5055,"lon":-0.3127,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Ealing Broadway","lat":51.5048,"lon":-0.3075,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Acton Main Line","lat":51.5079,"lon":-0.2654,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Paddington","lat":51.5165,"lon":-0.1789,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Bond Street","lat":51.5138,"lon":-0.1489,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Tottenham Court Road","lat":51.5301,"lon":-0.1327,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Farringdon","lat":51.5184,"lon":-0.1043,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null},
+      {"stop_name":"Liverpool Street","lat":51.5182,"lon":-0.0824,"currency":"GBP","prices":[{"type":"standard","amount":10.00}],"branch_id":null}
     ]
   },
   {
@@ -66,6 +70,8 @@ Emit ONLY this JSON array with MULTIPLE transport options:
     "mode": "underground",
     "duration": 50,
     "co2": null,
+    "url": "https://tfl.gov.uk/fares/tickets",
+    "hasFirstClass": false,
     "stops": [
       {"stop_name":"Heathrow Terminal 5","lat":51.47,"lon":-0.4863,"currency":"GBP","prices":[{"type":"peak","amount":5.90},{"type":"off_peak","amount":3.80}],"branch_id":"T5-line"},
       {"stop_name":"Heathrow Terminal 4","lat":51.459,"lon":-0.447,"currency":"GBP","prices":[{"type":"peak","amount":5.90},{"type":"off_peak","amount":3.80}],"branch_id":"T4-line"},
@@ -100,7 +106,9 @@ Emit ONLY this JSON array with MULTIPLE transport options:
 
 CRITICAL REQUIREMENTS:
 1. ALWAYS include MULTIPLE transport options (at least Elizabeth Line, Piccadilly Line, Heathrow Express, and other major services for Heathrow)
-2. For routes with MULTIPLE BRANCHES (like Heathrow Express and Piccadilly Line), list each branch separately with its unique branch_id
+2. EVERY transport MUST have a "url" field with a valid booking URL (e.g., https://www.heathrowexpress.com/, https://tfl.gov.uk/fares/tickets, https://www.nationalexpress.com/)
+3. BUS FARES: If any BUS (mode: "bus") services are included, ALL bus fares MUST be £1.75 per journey. NOTE: Coaches (mode: "coach") have different fare structures and should NOT be set to £1.75
+4. For routes with MULTIPLE BRANCHES (like Heathrow Express and Piccadilly Line), list each branch separately with its unique branch_id
 3. IMPORTANT: Branches should NOT be consecutive with the same branch_id. Instead:
    - List each branch's terminal separately (e.g., T5 with branch_id "T5-branch")
    - Then list other branches (e.g., T4 with branch_id "T4-branch")
@@ -125,6 +133,8 @@ Final Answer Schema:
       "underground", "tube", "metro", "train", "rail", "bus", "coach"
   - duration: journey time in MINUTES from airport to city center (integer)
   - co2: always null
+  - url: booking URL where users can purchase tickets (string, e.g., "https://www.heathrowexpress.com/ticket-fares")
+  - hasFirstClass: boolean indicating if first class tickets are available (true or false)
   - stops: array of stop objects, LISTED IN COMPLETE ORDER, each with:
     - stop_name: station/stop name (string)
     - lat: latitude WGS84 (number)
@@ -139,7 +149,7 @@ RULES:
 3. For multi-branch routes, use branch_id to identify separate branches
 4. Stops with the same branch_id should connect to each other in sequence
 5. Use null for branch_id on the main line and at convergence hubs
-6. Use realistic coordinates and prices to 2 decimal places or whole numbers
+6. PRICES: Format all prices to either 0 decimal places (whole numbers like 25, 30) OR exactly 2 decimal places (like 25.50, 17.90). NO other formats allowed.
 7. For EACH transport option, list ALL stations/stops in order from airport to city center
 8. DURATION is CRITICAL: Provide an accurate, realistic journey time in minutes from the airport to the city center
 9. Never output non-JSON text

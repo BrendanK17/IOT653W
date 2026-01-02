@@ -56,6 +56,9 @@ from app.services.mongodb import (
     save_terminal_transfers,
     get_terminal_transfers,
     get_all_terminal_transfers,
+    add_sponsored_transport,
+    get_sponsored_transports,
+    get_all_sponsored_transports,
 )
 from app.services.mongodb import save_airport_distance, get_airport_distance
 from math import radians, sin, cos, atan2, sqrt
@@ -284,16 +287,6 @@ def api_put_transport_activity_mapping(payload: dict = Body(...)):
         if "mapping" in payload and isinstance(payload.get("mapping"), dict):
             mapping = payload["mapping"]
 
-        allowed_modes = {
-            "underground",
-            "tube",
-            "metro",
-            "train",
-            "rail",
-            "bus",
-            "coach",
-        }
-
         cleaned: dict[str, str] = {}
         for k, v in mapping.items():
             if not isinstance(k, str):
@@ -301,11 +294,6 @@ def api_put_transport_activity_mapping(payload: dict = Body(...)):
                     status_code=400, detail="mapping keys must be strings"
                 )
             key = k.strip().lower()
-            if key not in allowed_modes:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid mode '{k}'. Allowed: {sorted(allowed_modes)}",
-                )
             if not isinstance(v, str) or not v.strip():
                 raise HTTPException(
                     status_code=400,
@@ -950,3 +938,63 @@ def api_get_all_terminal_transfers():
         logging.exception("Failed to get all terminal transfers")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+
+@router.post("/airports/{iata}/transports")
+def api_add_transport(iata: str, transport_data: dict = Body(...)):
+    """Add or manage a transport option for a specific airport.
+    
+    The transport_data should include:
+    - name: Transport service name (required)
+    - mode: Transport mode - train, bus, coach, taxi, underground (required)
+    - price: Price in GBP (required)
+    - duration: Duration in minutes or as a string (required)
+    - stops: Number of stops or array of stop objects (optional)
+    - sponsored: Boolean to mark as sponsored (optional, defaults to False)
+    - url: Booking URL (optional)
+    - Any other transport fields
+    """
+    try:
+        iata = validate_iata(iata)
+        airport = get_airport_by_iata(iata.upper())
+        if not airport:
+            raise HTTPException(status_code=404, detail="Airport not found")
+        
+        # Validate required fields
+        required_fields = ["name", "mode", "price", "duration"]
+        missing_fields = [field for field in required_fields if field not in transport_data]
+        if missing_fields:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Missing required fields: {', '.join(missing_fields)}"
+            )
+        
+        # Add the transport (sponsored flag defaults to False if not provided)
+        transport_data.setdefault("sponsored", False)
+        doc_id = add_sponsored_transport(iata.upper(), transport_data)
+        
+        return {
+            "message": "Transport added successfully",
+            "iata": iata.upper(),
+            "id": str(doc_id)
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Failed to add transport for %s", iata)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/airports/{iata}/sponsored-transports")
+def api_get_sponsored_transports(iata: str):
+    """Retrieve all sponsored transport options for a specific airport."""
+    try:
+        iata = validate_iata(iata)
+        transports = get_sponsored_transports(iata.upper())
+        return {"transports": transports, "airport": iata.upper(), "count": len(transports)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        logging.exception("Failed to get sponsored transports for %s", iata)
+        raise HTTPException(status_code=500, detail="Internal server error")

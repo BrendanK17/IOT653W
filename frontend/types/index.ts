@@ -18,6 +18,31 @@ export interface Stop {
   branch_id?: string | null;
 }
 
+export interface EmissionData {
+  co2e: number;
+  co2e_unit: string;
+  constituent_gases: {
+    co2e_total?: number | null;
+    co2e_other?: number | null;
+    co2?: number | null;
+    ch4?: number | null;
+    n2o?: number | null;
+  };
+  source: string;
+  emission_factor_name: string;
+  activity_id: string;
+  year: number;
+}
+
+export interface CO2Data {
+  activity_id: string;
+  passengers: number;
+  distance_km: number;
+  source: string;
+  well_to_tank: EmissionData;
+  fuel_combustion: EmissionData;
+}
+
 export interface TransportOption {
   id: string;
   mode: TransportMode;
@@ -31,10 +56,13 @@ export interface TransportOption {
   isCheapest: boolean;
   isBest: boolean;
   route: string;
-  co2: number | null; // kg of CO2
+  co2: CO2Data | number | null; // Can be detailed CO2 data or kg of CO2
+  url?: string; // Booking URL for the transport option
   iata?: string;
   created_at?: string;
   updated_at?: string;
+  sponsored?: boolean; // Flag to indicate if this is a sponsored transport option
+  hasFirstClass?: boolean; // Flag to indicate if first class tickets are available
 }
 
 export interface FilterState {
