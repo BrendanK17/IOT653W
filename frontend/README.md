@@ -169,10 +169,12 @@ VITE_APP_NAME=GroundScanner
 VITE_APP_VERSION=1.0.0
 ```
 
-**Important**: 
-- `.env.local` is ignored by git - safe for local secrets
-- Access via `import.meta.env.VITE_*` in code
-- Changes require server restart
+**Important Security Notes**: 
+- ⚠️ `.env.local` is ignored by git - safe for local configuration
+- 🔒 Never commit API keys, tokens, or secrets to the repository
+- 🔑 Access environment variables via `import.meta.env.VITE_*` in code
+- 🛡️ All values above are examples - replace with your actual configuration
+- 📝 Changes to `.env` files require server restart to take effect
 
 ### Available Environments
 

@@ -114,7 +114,12 @@ OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=mistral
 ```
 
-**Important**: Never commit `.env` to version control. It's already in `.gitignore`.
+**Important Security Notes**:
+- ⚠️ Never commit `.env` files to version control (already in `.gitignore`)
+- 🔒 Use strong, unique values for `JWT_SECRET_KEY` in production
+- 🔑 Keep all API keys secret and rotate them regularly
+- 🛡️ Change all default/example credentials before deployment
+- 📝 The example values above are placeholders - replace with your actual keys
 
 ## 🚀 Running Locally
 
