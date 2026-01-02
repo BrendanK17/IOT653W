@@ -108,33 +108,17 @@ npm install
 
 ## Environment configuration
 
-You must create local environment files for secrets and service keys. Never commit these files.
+You must create a local environment file for secrets and service keys. Never commit this file.
 
 Backend (`backend/.env`) — example values:
 
 ```env
-DEBUG=True
-ENVIRONMENT=development
-MONGODB_URL=mongodb://localhost:27017
-DATABASE_NAME=groundscanner
-JWT_SECRET_KEY=your-super-secret-key
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+MONGODB_CONNECTION_STRING=mongodb://localhost:27017
 TAVILY_API_KEY=your-tavily-api-key
 CLIMATIQ_API_KEY=your-climatiq-api-key
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=mistral
-```
-
-Frontend (`frontend/.env.local`) — example values:
-
-```env
-VITE_API_URL=http://localhost:8000
-VITE_API_TIMEOUT=30000
-VITE_ENABLE_ANALYTICS=false
-VITE_ENABLE_DARK_MODE=true
-VITE_APP_NAME=GroundScanner
-VITE_APP_VERSION=1.0.0
+OLLAMA_API_KEY=abcd
+REFRESH_COOKIE_SECURE=false
+SECRET_KEY=abcd
 ```
 
 Notes:
