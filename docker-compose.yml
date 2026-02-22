@@ -1,0 +1,17 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    # Create backend/.env with MONGODB_CONNECTION_STRING, TAVILY_API_KEY, etc.
+    # See README.md for required variables.
+    env_file:
+      - path: ./backend/.env
+        required: false
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
