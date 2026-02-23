@@ -1,4 +1,5 @@
-FROM node:20-slim
+# Stage 1: build the React app
+FROM node:20-slim AS build
 
 WORKDIR /app
 
@@ -7,10 +8,16 @@ COPY package.json package-lock.json ./
 
 RUN npm ci
 
-# Copy application source
+# Copy application source and build
 COPY . .
 
-EXPOSE 3000
+RUN npm run build
 
-# Bind to 0.0.0.0 so the dev server is reachable from outside the container
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Stage 2: serve the built files with NGINX
+FROM nginx:1.26-alpine
+
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
