@@ -6,11 +6,12 @@ from fastapi import Response
 from app.routers import auth as auth_module
 from app.auth import schemas as auth_schemas
 import logging
+import os
 
 app = FastAPI(title="GroundScanner Backend")
 
 # Allow requests from your frontend (e.g. localhost:3000)
-origins = [
+_default_origins = [
     # Common dev origins (localhost and 127.0.0.1 with common dev ports)
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -19,6 +20,11 @@ origins = [
     # Optional: include the backend origin for tooling
     "http://127.0.0.1:8000",
 ]
+
+# Allow additional origins to be specified via the CORS_ORIGINS environment
+# variable as a comma-separated list (e.g. the production ELB frontend URL).
+_extra_origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
+origins = _default_origins + _extra_origins
 
 app.add_middleware(
     CORSMiddleware,

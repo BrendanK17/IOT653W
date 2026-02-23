@@ -11,6 +11,10 @@ RUN npm ci
 # Copy application source and build
 COPY . .
 
+# Allow the backend API URL to be set at build time
+ARG VITE_API_BASE
+ENV VITE_API_BASE=${VITE_API_BASE}
+
 RUN npm run build
 
 # Stage 2: serve the built files with NGINX
