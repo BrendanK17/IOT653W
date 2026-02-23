@@ -117,7 +117,6 @@ MONGODB_CONNECTION_STRING=mongodb://localhost:27017
 TAVILY_API_KEY=your-tavily-api-key
 CLIMATIQ_API_KEY=your-climatiq-api-key
 OLLAMA_API_KEY=abcd
-REFRESH_COOKIE_SECURE=false
 SECRET_KEY=abcd
 ```
 

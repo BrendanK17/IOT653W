@@ -3,8 +3,6 @@ import uuid
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 
-# Ensure cookies are allowed in test environment
-os.environ.setdefault("REFRESH_COOKIE_SECURE", "false")
 
 
 def random_email():
