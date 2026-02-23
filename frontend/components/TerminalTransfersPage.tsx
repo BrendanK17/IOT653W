@@ -22,7 +22,7 @@ interface TerminalTransfers {
   sections: Section[];
 }
 
-const API_BASE: string = (import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE || 'http://127.0.0.1:8000';
+const API_BASE: string = (window as unknown as { __CONFIG__?: { VITE_API_BASE?: string } }).__CONFIG__?.VITE_API_BASE || 'http://127.0.0.1:8000';
 
 const extractIATA = (airportString: string): string => {
   const match = airportString.match(/\(([A-Z]{3})\)/);
