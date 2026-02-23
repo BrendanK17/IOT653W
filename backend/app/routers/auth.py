@@ -24,12 +24,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 # cookie settings
 REFRESH_COOKIE_NAME = os.getenv("REFRESH_COOKIE_NAME", "refresh_token")
 REFRESH_COOKIE_MAX_AGE = int(os.getenv("REFRESH_COOKIE_MAX_AGE", 60 * 60 * 24 * 30))
-# allow disabling Secure flag for local development (set to "false")
-REFRESH_COOKIE_SECURE = os.getenv("REFRESH_COOKIE_SECURE", "true").lower() in (
-    "1",
-    "true",
-    "yes",
-)
+REFRESH_COOKIE_SECURE = False
 
 
 @router.post("/register", status_code=201)
