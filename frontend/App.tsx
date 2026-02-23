@@ -506,7 +506,7 @@ function App() {
   // login using top-level alias
   const handleLoginApi = async (email: string, password: string) => {
     try {
-      const res = await fetch(`${(import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/login`, {
+      const res = await fetch(`${(window as unknown as { __CONFIG__?: { VITE_API_BASE?: string } }).__CONFIG__?.VITE_API_BASE || 'http://127.0.0.1:8000'}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include', // send/receive refresh cookie
@@ -533,7 +533,7 @@ function App() {
 
   const handleRegister = async (email: string, password: string) => {
     try {
-      const res = await fetch(`${(import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/register`, {
+      const res = await fetch(`${(window as unknown as { __CONFIG__?: { VITE_API_BASE?: string } }).__CONFIG__?.VITE_API_BASE || 'http://127.0.0.1:8000'}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -555,7 +555,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${(import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE || 'http://127.0.0.1:8000'}/auth/logout`, { 
+      await fetch(`${(window as unknown as { __CONFIG__?: { VITE_API_BASE?: string } }).__CONFIG__?.VITE_API_BASE || 'http://127.0.0.1:8000'}/auth/logout`, { 
         method: 'POST', 
         credentials: 'include',
         headers: {
