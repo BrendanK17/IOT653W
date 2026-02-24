@@ -21,7 +21,8 @@ RUN apk add --no-cache gettext
 
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY public/config.template.js /usr/share/nginx/html/config.template.js
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 
 EXPOSE 80
 
-CMD sh -c "envsubst '\$VITE_API_BASE' < /usr/share/nginx/html/config.template.js > /usr/share/nginx/html/config.js && nginx -g 'daemon off;'"
+CMD sh -c "envsubst '\$VITE_API_BASE' < /usr/share/nginx/html/config.template.js > /usr/share/nginx/html/config.js && envsubst '\$NGINX_BACKEND_URL' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
