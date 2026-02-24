@@ -1,0 +1,20 @@
+server {
+    listen 80;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Proxy all backend API requests to the backend service
+    location ~ ^/(airports|cities|auth|login|register|example|llm|climatiq|terminal-transfers|transport-activity-mapping|tavily|country-regions) {
+        proxy_pass ${NGINX_BACKEND_URL};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Serve static assets and SPA fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
